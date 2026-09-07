@@ -1,0 +1,19 @@
+{
+  "name": "minidrive",
+  "private": true,
+  "packageManager": "yarn@4.9.1",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "yarn workspaces foreach -A --topological-dev run build",
+    "test": "yarn workspaces foreach -A run test",
+    "stack:up": "docker compose -f docker/compose.yml up -d --build --wait",
+    "stack:down": "docker compose -f docker/compose.yml down",
+    "stack:reset": "docker compose -f docker/compose.yml down -v"
+  }
+}
