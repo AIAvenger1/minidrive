@@ -18,6 +18,9 @@ SyncEngine -> SyncPlan -> SyncAction) straight.
 
 Colour groups: blue = access/session, green = file list / preview, yellow = file metadata + bytes,
 purple = synchronization, grey = enumerations (infrastructure).
+
+This is the analysis-level model: Space, Session, LocalFolder and FileContent are concepts, not
+classes of the implementation — the legend lists what each of them became in the code.
 """
 from _common import *
 
@@ -35,9 +38,8 @@ user = d.klass(
 )
 engine = d.klass(
     "SyncEngine",
-    attrs=["- localFolder: LocalFolder", "- plan: SyncPlan"],
-    methods=["+ scan(): SyncPlan", "+ synchronize(): SyncReport",
-             "+ startWatching(): void", "+ stopWatching(): void"],
+    attrs=["- localFolder: LocalFolder"],
+    methods=["+ scan(dir): LocalFileInfo[]", "+ synchronize(dir): SyncReport"],
     color=SYNC,
 )
 
@@ -94,13 +96,13 @@ preview = d.klass(
     methods=["+ canRender(ext: string): boolean", "+ render(): PreviewResult"],
     color=LIST,
 )
-preview_kind = d.enum("PreviewKind", ["TEXT", "IMAGE", "NONE"], color=INFRA)
+preview_kind = d.enum("PreviewKind", ["text", "image", "none"], color=INFRA)
 action = d.klass(
     "SyncAction",
     attrs=["- kind: SyncActionKind", "- name: string", "- reason: string"],
     color=SYNC,
 )
-action_kind = d.enum("SyncActionKind", ["UPLOAD", "DOWNLOAD", "SKIP"], color=INFRA)
+action_kind = d.enum("SyncActionKind", ["upload", "download", "skip"], color=INFRA)
 
 # ---------------------------------------------------------------------------
 # R3 — file bytes (yellow), concrete previews (green), remaining enumerations (grey)
@@ -125,8 +127,8 @@ image_preview = d.klass(
     methods=["+ canRender(ext: string): boolean", "+ render(): PreviewResult"],
     color=LIST,
 )
-sort_order = d.enum("SortOrder", ["ASC", "DESC"], color=INFRA)
-file_filter = d.enum("FileFilter", ["ALL", "CPP_PNG"], color=INFRA)
+sort_order = d.enum("SortOrder", ["asc", "desc"], color=INFRA)
+file_filter = d.enum("FileFilter", ["all", "cpp", "png"], color=INFRA)
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +156,7 @@ d.generalization(image_preview, preview)
 # synchronization (SyncEngine -> SyncPlan -> SyncAction is a weighted vertical spine)
 d.dependency(engine, space, "«reads»")
 comp(engine, folder, "1", "1")
-comp(engine, plan, "1", "0..1", weight=4)
+d.edge(engine, plan, E_DEPENDENCY, "«creates»", weight=4)   # the plan is a local variable of synchronize()
 d.dependency(engine, report, "«creates»")
 comp(plan, action, "1", "0..*", weight=6)
 d.dependency(action, action_kind)
@@ -173,8 +175,15 @@ d.legend(
     "◇──  aggregation: shared part, independent lifetime (not used in the domain model)\n"
     "──▷  generalization: TextPreview / ImagePreview are kinds of FilePreview\n"
     "───  association with multiplicities (1, 0..1, 0..*) and role names\n"
-    "- - ▷  dependency: «use», «reads», «creates» — the source needs the target",
-    w=520,
+    "- - ▷  dependency: «use», «reads», «creates» — the source needs the target\n"
+    "\n"
+    "Conceptual classes without a direct counterpart in the implementation:  Space (ownership is the\n"
+    "FileEntry.ownerId column),  Session (the session is a stateless JWT, so no row is stored),\n"
+    "LocalFolder (the bound folder is a path in the desktop settings),  FileContent (an object in MinIO\n"
+    "reached through StorageService) and FileEntry.isNewerThan() (inlined in computeSyncPlan).\n"
+    "User.register() / User.authenticate() are realised by AuthService and UsersService.\n"
+    "Enumerations carry the literal values of the TypeScript union types (packages/shared/src/types.ts).",
+    w=700,
 )
 
 d.layout(rankdir="TB", nodesep=0.55, ranksep=1.0)

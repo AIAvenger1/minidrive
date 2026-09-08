@@ -1,8 +1,12 @@
 """12 — State diagram: client session (spec §5, "Client session").
 
 initial -> LoggedOut -> Authenticating -> composite LoggedIn { initial -> Browsing;
-Browsing <-> Previewing | Uploading | Downloading | Deleting | Syncing };
-LoggedIn --(Log out | any 401)--> LoggedOut;  LoggedOut --(close app)--> final.
+Browsing <-> Previewing | Uploading | Downloading | ConfirmingDelete -> Deleting | Syncing };
+LoggedIn --(Log out | 401 on refresh)--> LoggedOut;  LoggedOut --(close app)--> final.
+
+There is no «close preview» control: the preview panel is always mounted next to the table, so
+Previewing is left when the selection is cleared (DriveViewModel.setFiles drops a file that is
+no longer in the list) or when another row is clicked.
 
 Layout (TB): rank 0 = initial + final pseudo-states, rank 1 = LoggedOut | Authenticating,
 below them the LoggedIn composite.  Inside the composite Previewing / initial / Syncing sit
@@ -35,11 +39,12 @@ li = d.composite_state("LoggedIn")
 previewing = d.state("Previewing", ["do / TextPreview | ImagePreview"], color=LIST, group=li)
 li_start = d.initial(group=li)
 syncing = d.state("Syncing", ["do / SyncEngine.synchronize()"], color=SYNC, group=li)
-browsing = d.state("Browsing", ["entry / loadFiles()", "do / render FileTable (sort, filter, columns)"],
+browsing = d.state("Browsing", ["entry / useDrive.refresh()", "do / render FileTable (sort, filter, columns)"],
                    color=LIST, group=li)
 uploading = d.state("Uploading", ["do / POST /files"], color=OPS, group=li)
 downloading = d.state("Downloading", color=OPS, group=li)
-deleting = d.state("Deleting", color=OPS, group=li)
+confirming = d.state("ConfirmingDelete", ["do / confirmation dialog"], color=OPS, group=li)
+deleting = d.state("Deleting", ["do / DELETE /files/:id"], color=OPS, group=li)
 
 # ---- transitions: session ----------------------------------------------------------------------
 tr(start, logged_out)
@@ -51,16 +56,16 @@ tr(auth, logged_out, "401 / show error", dot_reverse=True)
 
 # Edges that touch the composite border are drawn by draw.io only (skip_dot) and get fixed
 # ports after layout (see below); Graphviz ranks the composite through the invisible edge.
-e_enter = tr(auth, li, "200 / SessionStore.set(token)")
+e_enter = tr(auth, li, "200 / SessionStore.save(token)")
 e_enter.skip_dot = True
 e_logout = tr(li, logged_out, "Log out / SessionStore.clear()")
 e_logout.skip_dot = True
-e_401 = tr(li, logged_out, "any 401 / clear token")
+e_401 = tr(li, logged_out, "401 on list refresh / clear token")
 e_401.skip_dot = True
 
 # ---- transitions: inside LoggedIn --------------------------------------------------------------
 tr(browsing, previewing, "click row", dot_reverse=True)
-tr(previewing, browsing, "close")
+tr(previewing, browsing, "selection cleared\n(file gone after refresh)")
 tr(li_start, browsing)
 tr(browsing, syncing, "Synchronize", dot_reverse=True)
 tr(syncing, browsing, "SyncReport")
@@ -68,8 +73,10 @@ tr(browsing, uploading, "drop files | select files")
 tr(uploading, browsing, "FileDto received / refresh")
 tr(browsing, downloading, "download | drag out")
 tr(downloading, browsing, "saved")
-tr(browsing, deleting, "delete")
-tr(deleting, browsing, "204 / refresh")
+tr(browsing, confirming, "delete")
+tr(confirming, browsing, "cancel", dot_reverse=True)
+tr(confirming, deleting, "confirm")
+tr(deleting, browsing, "204 / refresh", dot_reverse=True)
 
 d.same_rank(start, fin)
 d.same_rank(logged_out, auth)
@@ -80,7 +87,8 @@ d.legend(
     "rounded rectangle = state (entry / do activities listed inside)\n"
     "large rounded frame «LoggedIn» = composite state with its own initial pseudo-state and sub-states\n"
     "arrow = transition, label:  event [guard] / action\n"
-    "colours: blue = session, green = file list and preview, yellow = upload / download / delete, "
+    "colours: blue = session, green = file list and preview, yellow = upload / download / delete "
+    "(the deletion is confirmed in a dialog first), "
     "purple = synchronization",
     w=600,
 )

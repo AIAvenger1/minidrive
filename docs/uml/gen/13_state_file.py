@@ -1,16 +1,16 @@
 """13 — State diagram: lifecycle of one file name during synchronization (UC14).
 
 Left → right (LR): initial ● → choice ◇ → LocalOnly / RemoteOnly → Uploading / Downloading →
-Synced (same column, middle row) → ModifiedLocally / ModifiedRemotely (final ◉ between them)
-→ Conflict.  Local path on the top row, remote path on the bottom row.
-Colours: purple = synchronization states, yellow = transfer in progress, green = synchronized,
-red = version conflict (UC14b).
+Synced (same column, middle row) → ModifiedLocally / ModifiedRemotely (final ◉ between them).
+Local path on the top row, remote path on the bottom row.
+Colours: purple = synchronization states, yellow = transfer in progress, green = synchronized.
+
+There is no Conflict state: computeSyncPlan never detects "changed on both sides".  It compares
+the local mtime with the remote updatedAt for every name and the newer side simply wins, so a
+two-sided change is already covered by ModifiedLocally / ModifiedRemotely (spec §4.2).
 
 Library workarounds (drawio.py is not modified):
 * UML «choice» pseudo-state = simple_box with shape=rhombus.
-* The two Conflict → Uploading / Downloading resolutions would cut through ModifiedLocally /
-  ModifiedRemotely, so they are hidden from Graphviz (skip_dot) and re-routed after layout as
-  orthogonal "bus" lines above / below the diagram (GraphDiagram offers `bend`, not waypoints).
 * Uploading → Synced and Downloading → Synced are flat (same-rank) edges; they are drawn by
   draw.io as straight vertical lines with the label pushed to the side.
 """
@@ -43,12 +43,9 @@ mod_local = d.state("ModifiedLocally", color=SYNC)
 fin = d.final()
 mod_remote = d.state("ModifiedRemotely", color=SYNC)
 
-conflict = d.state("Conflict", color="red")
-
 # Notes
 n_local = d.note("deleted on server → LocalOnly:\ndeletions never propagate;\nnext sync re-uploads the file")
 n_remote = d.note("deleted locally → RemoteOnly:\nnext sync re-downloads the file")
-n_conflict = d.note("UC14b: both sides changed —\nnewest version wins\n(local mtime vs updatedAt)")
 
 # ---------------------------------------------------------------------------
 # Transitions (event [guard] / action).  Graphviz ranks: forward edges define the columns,
@@ -80,10 +77,6 @@ tr(uploading, mod_local, "error / failed → retry next sync")
 tr(mod_remote, downloading, "sync: download", dot_reverse=True)
 tr(downloading, mod_remote, "error / failed → retry next sync")
 
-# both sides changed → Conflict (UC14b)
-tr(mod_local, conflict, "remote also changed")
-tr(mod_remote, conflict, "local also changed")
-
 # deletions never propagate: the file becomes one-sided again.  Straight draw.io lines (Graphviz
 # would kink the lower one around Downloading); the straight chord crosses nothing.
 e_del_srv = tr(synced, local_only, "deleted on server", label_offset=(0.0, -14.0))
@@ -92,19 +85,10 @@ for e in (e_del_srv, e_del_loc):
     e.skip_dot = True
     e.constraint = False
 
-# conflict resolution — re-routed as buses after layout
-bus_edges = [
-    tr(conflict, uploading, "[local newer] upload"),
-    tr(conflict, downloading, "[remote newer] download"),
-]
-for e in bus_edges:
-    e.skip_dot = True
-    e.constraint = False
-
 # Notes
 d.note_link(n_local, local_only, place="above")
 d.note_link(n_remote, remote_only, place="below")
-d.note_link(n_conflict, conflict, place="right")
+
 
 # columns
 d.same_rank(uploading, synced, downloading)
@@ -113,10 +97,15 @@ d.same_rank(mod_local, fin, mod_remote)
 d.legend(
     "Legend — lifecycle of one file name as seen by SyncEngine (computeSyncPlan, UC14)\n"
     "States: purple = synchronization (one-sided / modified), yellow = transfer in progress, "
-    "green = synchronized, red = version conflict (UC14b, newest version wins)\n"
+    "green = synchronized\n"
     "Transition label: event [guard] / action.   ◇ = choice pseudo-state,  ● = initial,  "
-    "◉ = final (Deleted: file removed on both sides)",
-    w=640,
+    "◉ = final (Deleted: file removed on both sides)\n"
+    "Planning rule (packages/shared/sync.ts): equal size and |mtime − updatedAt| ≤ 2 s → Synced (skip); an unparsable\n"
+    "remote updatedAt → download; otherwise the newer side wins.  «Changed on both sides» is never detected as a separate\n"
+    "situation and nothing is ever merged, so the model has no Conflict state (spec §4.2).\n"
+    "Web client only: reconcileWithLedger re-stamps a file whose size and mtime still match the localStorage ledger with\n"
+    "the server's updatedAt before planning, so a freshly written download is recognised as Synced.",
+    w=760,
 )
 
 # ---------------------------------------------------------------------------
@@ -130,14 +119,6 @@ def _cell(cid):
 
 def _edge(a, b):
     return next(c for c in d.cells if not c.vertex and c.source == a and c.target == b)
-
-
-def bus(a, b, y, side):
-    """Exit `a` and enter `b` through their top (side=0) or bottom (side=1) edge, running along y."""
-    ca, cb, e = _cell(a), _cell(b), _edge(a, b)
-    e.style = e.style.replace(STRAIGHT, ORTHO) + (
-        f"exitX=0.5;exitY={side};exitDx=0;exitDy=0;entryX=0.5;entryY={side};entryDx=0;entryDy=0;")
-    e.points = [(ca.x + ca.w / 2, y), (cb.x + cb.w / 2, y)]
 
 
 # Row alignment: Graphviz cannot pin rows in LR mode, so ModifiedLocally / ModifiedRemotely are
@@ -178,11 +159,5 @@ rebend(mod_local, uploading, 28, -12)       # upper curve, label above
 rebend(uploading, mod_local, 28, -12)       # lower curve, label below
 rebend(mod_remote, downloading, 28, -12)    # upper curve, label above
 rebend(downloading, mod_remote, 28, -12)    # lower curve, label below
-
-# Conflict → Uploading / Downloading around the outside of the diagram
-top_y = min(_cell(n).y for n in (uploading, mod_local, conflict)) - 70
-bottom_y = max(_cell(n).y + _cell(n).h for n in (downloading, mod_remote, conflict)) + 70
-bus(conflict, uploading, top_y, 0)
-bus(conflict, downloading, bottom_y, 1)
 
 d.save(OUT("13-state-file"))

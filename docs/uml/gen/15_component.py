@@ -1,10 +1,12 @@
 """15 — Component diagram with interfaces.
 
 Source of truth: docs/superpowers/specs/2026-09-07-minidrive-design.md §3 (architecture).
-Left → right: shared package + bound local folder | web / desktop clients | REST interface |
+Left → right: shared packages + bound local folder | web / desktop clients | REST interface |
 API modules | provided storage interfaces (SQL, S3) | infrastructure (PostgreSQL, MinIO).
+Both clients import the same two workspace packages: @minidrive/shared (types and pure logic)
+and @minidrive/ui (the React screens and controls), so the UI components belong to neither app.
 Colours: blue = web client (access), purple = desktop client + bound folder (synchronization),
-green = @minidrive/shared (file-list logic), grey = infrastructure (API, databases).
+green = @minidrive/shared and @minidrive/ui (file-list logic and screens), grey = infrastructure.
 """
 from _common import *  # noqa: F401,F403
 
@@ -53,13 +55,15 @@ g_api = d.group("API — NestJS (apps/api)", color=INFRA)
 shared = d.component("@minidrive/shared\n(packages/shared)", LIST, h=110)
 folder = d.artifact("Bound local folder", SYNC)
 
+# Column 0b: the shared React layer — both clients render the very same screens and controls
+ui_pkg = d.component("@minidrive/ui (packages/ui)\nLoginForm, DriveWorkspace,\nSyncPanel, FileTable, PreviewPanel,\nUploadDropzone, SortControl,\nFilterControl, ColumnToggle,\napiRegistry, useDrive", LIST, w=280, h=120)
+
 # ---------------------------------------------------------------------------
 # Column 1: client components.  One width for all six boxes so the edges leaving them to the
 # right jog at the same x.
 # ---------------------------------------------------------------------------
 CW = 260
 pages = d.component("Pages (/login, /drive)", ACCESS, group=g_web, w=CW)
-ui_comps = d.component("UI components\n(FileTable, PreviewPanel, …)", ACCESS, group=g_web, w=CW)
 bsync = d.component("BrowserSyncEngine", ACCESS, group=g_web, w=CW)
 
 renderer = d.component("Renderer UI (React)", SYNC, group=g_desktop, w=CW)
@@ -71,7 +75,8 @@ main_proc = d.component("Main process\n(SyncEngine, FolderWatcher,\nIpcHandlers,
 # Column 2: the REST interface provided by the API
 # ---------------------------------------------------------------------------
 # three short lines: a narrow label leaves room for the consumer edges arriving from below-left
-rest = d.lollipop("REST API\n(/auth, /files)\nHTTPS/JSON")
+rest = d.lollipop("REST API\n(/auth, /files,\n/health, /docs)\nHTTPS/JSON")
+n_rest = d.note("In the cloud deployment both clients reach this\ninterface through the caddy reverse proxy (HTTPS :443);\nthe web app itself is served by the web container\n(Next.js standalone, :3000).  /docs (Swagger) is\npublished locally only (SWAGGER_ENABLED).", w=330)
 
 # ---------------------------------------------------------------------------
 # Column 3: API modules — one column, internal dependencies drawn as vertical arrows.
@@ -102,6 +107,7 @@ requires(bsync, rest)
 # weight pulls the lollipop down towards the desktop client so this edge arrives almost horizontally
 # and does not cut through the lollipop label hanging under the circle
 requires(renderer, rest, weight=3)
+d.note_link(n_rest, rest, place="auto")
 
 # ---------------------------------------------------------------------------
 # Storage interfaces: SQL provided by PostgreSQL, S3 API provided by MinIO
@@ -124,13 +130,15 @@ requires(main_proc, folder, "Node fs / chokidar", p=ports(0, 0.75, 1, 0.8), dot_
 # «import» of the shared package (arrows point left, towards column 0).  The four edges fan out
 # into four ports on the right side of the package: top source → top port.
 # ---------------------------------------------------------------------------
-requires(pages, shared, "«import»", p=ports(0, 0.5, 1, 0.2), dot_reverse=True)
+requires(ui_pkg, shared, "«import»", p=ports(0, 0.5, 1, 0.2), dot_reverse=True)
 requires(bsync, shared, "«import»", p=ports(0, 0.5, 1, 0.4), dot_reverse=True)
 requires(renderer, shared, "«import»", p=ports(0, 0.5, 1, 0.6), dot_reverse=True)
 requires(main_proc, shared, "«import»", p=ports(0, 0.25, 1, 0.8), dot_reverse=True)
 
-# Web pages are composed of the UI components (spec §3.4)
-d.dependency(pages, ui_comps, "«use»", **DOWN)
+# Both clients render the very same screens: they «import» @minidrive/ui instead of owning
+# a private copy of the components (apps/web/src/app/drive/page.tsx, apps/desktop/.../App.tsx).
+requires(pages, ui_pkg, "«import»", p=ports(0, 0.5, 1, 0.3), dot_reverse=True)
+requires(renderer, ui_pkg, "«import»", p=ports(0, 0.5, 1, 0.7), dot_reverse=True)
 
 # ---------------------------------------------------------------------------
 # API internal dependencies (spec §3.2): Auth → Users → Prisma, Files → Storage, Files → Prisma
@@ -145,6 +153,7 @@ d.dependency(files_mod, storage_mod, **DOWN)
 # the client / API columns are clusters and are aligned by dot itself.
 # ---------------------------------------------------------------------------
 d.same_rank(shared, folder)
+d.same_rank(ui_pkg, folder)
 d.same_rank(sql, s3)
 d.same_rank(postgres, minio)
 
@@ -153,7 +162,8 @@ d.legend(
     "solid line — assembly / IPC link;  «artifact» — folder on the local file system;  "
     "cylinder — database / object store\n"
     "colours: blue = web client (access);  purple = desktop client + local folder (synchronization);\n"
-    "green = shared package (file list, sort, filter, preview);  grey = infrastructure",
+    "green = shared workspace packages (@minidrive/shared logic, @minidrive/ui screens);  "
+    "grey = infrastructure",
     w=600,
 )
 

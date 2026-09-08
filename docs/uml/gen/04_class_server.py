@@ -2,8 +2,9 @@
 
 Source of truth: docs/superpowers/specs/2026-09-07-minidrive-design.md §3.2.
 
-Layout: Graphviz TB with one package (cluster) per Nest module plus "DTOs" and
-"Entities (Prisma models)".  Rows follow the call chain
+Layout: Graphviz TB with one package (cluster) per Nest module plus "DTOs",
+"Entities (Prisma models)" and "AppModule / bootstrap" (the /health probe and the typed
+environment produced by loadConfig).  Rows follow the call chain
 controller -> service -> infrastructure service (Users / Storage / Prisma); the
 DTOs hang under the controllers that use them, the entities sit next to FilesService.
 Edges are routed by Graphviz around the boxes; the «guard» edge is a flat
@@ -25,6 +26,7 @@ g_files = d.group("FilesModule", color=INFRA)
 g_prisma = d.group("PrismaModule", color=INFRA)
 g_storage = d.group("StorageModule", color=INFRA)
 g_entities = d.group("Entities (Prisma models)", color=INFRA)
+g_app = d.group("AppModule / bootstrap", color=INFRA)
 
 # ---------------------------------------------------------------------------
 # AuthModule
@@ -39,17 +41,20 @@ auth_ctl = d.klass(
     color=INFRA, group=g_auth,
 )
 jwt_guard = d.klass("JwtAuthGuard", color=INFRA, group=g_auth)
+current_user = d.klass("CurrentUser", stereotype="param decorator",
+                       methods=["+ (): JwtUser — reads request.user"], color=INFRA, group=g_auth)
 auth_svc = d.klass(
     "AuthService",
     attrs=["- jwt: JwtService"],
     methods=[
-        "+ register(dto): AuthResponseDto",
+        "+ register(dto: RegisterDto): AuthResponseDto",
+        "+ login(dto: LoginDto): AuthResponseDto",
         "+ validateUser(username, password): User",
-        "+ login(user: User): AuthResponseDto",
+        "- issue(user: User): AuthResponseDto",
     ],
     color=INFRA, group=g_auth,
 )
-jwt_strategy = d.klass("JwtStrategy", methods=["+ validate(payload): UserDto"], color=INFRA, group=g_auth)
+jwt_strategy = d.klass("JwtStrategy", methods=["+ validate(payload): JwtUser"], color=INFRA, group=g_auth)
 
 # ---------------------------------------------------------------------------
 # UsersModule
@@ -58,7 +63,8 @@ users_svc = d.klass(
     "UsersService",
     methods=[
         "+ findByUsername(username): User",
-        "+ create(username, passwordHash): User",
+        "+ findById(id): User",
+        "+ create(username, password): User",
         "+ hash(password): string",
         "+ verify(password, hash): boolean",
     ],
@@ -82,8 +88,8 @@ file_dto = d.klass(
         "+ name: string",
         "+ extension: string",
         "+ size: number",
-        "+ createdAt: Date",
-        "+ updatedAt: Date",
+        "+ createdAt: string (ISO)",
+        "+ updatedAt: string (ISO)",
         "+ uploadedBy: string",
         "+ modifiedBy: string",
     ],
@@ -110,6 +116,7 @@ files_svc = d.klass(
         "+ upsert(owner: User, file): FileDto",
         "+ getContent(ownerId, id): Readable",
         "+ delete(ownerId, id): void",
+        "- findOwned(ownerId, id): FileEntry",
         "- toDto(entry: FileEntry): FileDto",
     ],
     color=INFRA, group=g_files,
@@ -122,13 +129,15 @@ prisma_svc = d.klass(
     "PrismaService",
     stereotype="extends PrismaClient",
     attrs=["+ user", "+ fileEntry"],
-    methods=["+ onModuleInit(): void"],
+    methods=["+ onModuleInit(): void", "+ onModuleDestroy(): void"],
     color=INFRA, group=g_prisma,
 )
 storage_svc = d.klass(
     "StorageService",
     attrs=["- s3: S3Client", "- bucket: string"],
     methods=[
+        "+ fromEnv(): StorageService",
+        "+ onModuleInit(): void   — creates the bucket",
         "+ putObject(key, body, mimeType): void",
         "+ getObject(key): Readable",
         "+ deleteObject(key): void",
@@ -162,6 +171,26 @@ file_entry = d.klass(
 )
 
 # ---------------------------------------------------------------------------
+# AppModule / bootstrap — health probe and the typed environment
+# ---------------------------------------------------------------------------
+health_ctl = d.klass("HealthController", methods=["+ health(): {status: 'ok'}   — GET /health"],
+                     color=INFRA, group=g_app)
+app_config = d.klass(
+    "AppConfig",
+    stereotype="loadConfig(env)",
+    attrs=[
+        "+ port: number",
+        "+ databaseUrl: string",
+        "+ jwtSecret: string",
+        "+ s3: {endpoint, accessKey, secretKey, bucket, region}",
+        "+ corsOrigins: string[]",
+        "+ maxFileBytes: number   — MAX_FILE_MB, default 50",
+        "+ swaggerEnabled: boolean   — SWAGGER_ENABLED, /docs",
+    ],
+    color="white", group=g_app,
+)
+
+# ---------------------------------------------------------------------------
 # Relationships
 # ---------------------------------------------------------------------------
 # Auth call chain (weighted so it stays a straight column inside AuthModule)
@@ -185,6 +214,11 @@ d.dependency(files_svc, prisma_svc)
 # flat edge: UsersService and PrismaService share the infrastructure row
 d.dependency(users_svc, prisma_svc, constraint=False)
 d.dependency(files_svc, file_entry, "«maps»")
+# the typed environment: the storage client is built from it, the upload limit is read from it
+d.dependency(storage_svc, app_config, USES)
+d.dependency(files_ctl, app_config, "«uses» maxFileBytes")
+# @CurrentUser() feeds the guarded handlers (flat edge: the decorator stays on the controller row)
+d.dependency(auth_ctl, current_user, USES, constraint=False)
 # Entity association: one User owns many FileEntry rows
 d.assoc(user_ent, file_entry, "owner", mult_a="1", mult_b="0..*", weight=6)
 

@@ -39,13 +39,14 @@ web_client = d.artifact("MiniDrive web client (Next.js pages)", color="white", g
 # ---------------------------------------------------------------------------
 # Device 2 — cloud VM running Docker Compose (Stage 3 bonus)
 # ---------------------------------------------------------------------------
-g_cloud = d.node3d("«device»\nCloud VM — Ubuntu (DigitalOcean droplet, GitHub Student Pack)", color=INFRA)
+g_cloud = d.node3d("«device»\nCloud VM — Ubuntu (Docker host)", color=INFRA)
 g_compose = d.node3d("«executionEnvironment»\nDocker Compose", parent=g_cloud, color="white")
 caddy = d.component("caddy (TLS reverse proxy :443)", color=INFRA, group=g_compose)
 api = d.component("api — NestJS (:3000)", color=INFRA, group=g_compose)
-web = d.component("web — Next.js standalone (:3001)", color=INFRA, group=g_compose)
+web = d.component("web — Next.js standalone (:3000)", color=INFRA, group=g_compose)
 postgres = d.database("postgres\n(:5432, volume pgdata)", color=INFRA, group=g_compose)
 minio = d.database("minio\n(:9000, volume miniodata)", color=INFRA, group=g_compose)
+n_swagger = d.note("SWAGGER_ENABLED=false:\nthe /docs page is served\nlocally only", group=g_compose)
 
 # ---------------------------------------------------------------------------
 # Device 3 — developer workstation (Stage 2, everything local)
@@ -55,10 +56,16 @@ electron_dev = d.artifact("Electron app (yarn dev)", color="white", group=g_dev)
 g_compose_local = d.node3d("«executionEnvironment»\nDocker Compose (local)", parent=g_dev, color="white")
 api_local = d.component("api (:3000)", color=INFRA, group=g_compose_local)
 pg_local = d.database("postgres", color=INFRA, group=g_compose_local)
-minio_local = d.database("minio", color=INFRA, group=g_compose_local)
+minio_local = d.database("minio\n(:9000, console :9001)", color=INFRA, group=g_compose_local)
 # The note lives inside the local compose node, stacked above the api container (flat note
 # link, minlen=0) — placing it outside would land it in caddy's column and stretch the device box.
 n_same = d.note("same images as in the cloud", group=g_compose_local)
+
+# ---------------------------------------------------------------------------
+# Device 4 — GitHub Actions runner (continuous integration)
+# ---------------------------------------------------------------------------
+g_ci = d.node3d("«device»\nGitHub Actions runner (ubuntu-latest)", color=INFRA)
+ci_job = d.artifact("ci.yml — yarn build + yarn test", color="white", group=g_ci)
 
 # ---------------------------------------------------------------------------
 # Communication paths
@@ -76,7 +83,7 @@ path(desktop_app, caddy, "HTTPS/JSON :443", entry_y=0.7, minlen=2)
 # so "api" / "postgres" are declared first (bottom, exit port at 0.7) and "web" / "minio" second
 # (top, exit port at 0.3) — the fixed ports then match the node positions and no lines cross.
 path(caddy, api, "HTTP :3000", exit_y=0.7)
-path(caddy, web, "HTTP :3001", exit_y=0.3)
+path(caddy, web, "HTTP :3000", exit_y=0.3)
 path(api, postgres, "TCP :5432 (Prisma)", exit_y=0.7)
 path(api, minio, "S3 API :9000", exit_y=0.3)
 # Local stack: the same wiring as in the cloud, minus caddy / web
@@ -84,6 +91,7 @@ path(electron_dev, api_local, "HTTP :3000")
 path(api_local, pg_local, "TCP :5432", exit_y=0.7)
 path(api_local, minio_local, "S3 API :9000", exit_y=0.3)
 d.note_link(n_same, api_local, place="auto", minlen=0)
+d.note_link(n_swagger, api, place="auto", minlen=0)
 
 # NOTE: same_rank() cannot be used across clusters — Graphviz drops such nodes from their
 # cluster ("was already in a rankset, deleted from cluster").  The two workstations are
@@ -98,7 +106,8 @@ d.note_link(n_same, api_local, place="auto", minlen=0)
 #     across clusters are ignored by dot, so this non-flat edge is used instead).
 INVIS = (f'node [shape=box, fixedsize=true, label=""]; '
          f'"{bound_folder}" -> "{web_client}" [style=invis, minlen=1]; '
-         f'"{desktop_app}" -> "{electron_dev}" [style=invis, constraint=false];')
+         f'"{desktop_app}" -> "{electron_dev}" [style=invis, constraint=false];'
+         f'"{electron_dev}" -> "{ci_job}" [style=invis, constraint=false];')
 
 d.legend(
     "«device» / «executionEnvironment» — 3-D nodes (hardware / runtime)\n"

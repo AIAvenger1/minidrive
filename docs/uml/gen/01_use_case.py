@@ -4,6 +4,9 @@ Actor «User» on the far left, four root use cases in the first column (blue). 
 hangs as a tree: «include» from the root, «extend» toward the base use cases, and parameter
 leaves on plain solid association lines.
 
+There is no «Resolve version conflicts» use case: synchronization never asks the user which
+version to keep — the newest side wins and deletions are never propagated (spec §4.2).
+
 Colour groups: blue = access / session, green = file list (view / sort / filter / columns /
 preview), yellow = file operations (upload / update / download / delete), purple = sync.
 """
@@ -42,7 +45,8 @@ select_upload = d.usecase("Select and upload", OPS)
 dnd = d.usecase("Drag-and-drop", OPS)
 drag_out = d.usecase("Drag out of the window", OPS)
 auto_track = d.usecase("Automatic tracking\nof folder changes", SYNC)
-resolve = d.usecase("Resolve version\nconflicts", SYNC)
+refresh = d.usecase("Refresh the list", LIST)
+server_addr = d.usecase("Change the API server\naddress (desktop only)", ACCESS)
 
 # Column 4 — parameter leaves (narrower ellipses, green)
 LEAF_W = 130
@@ -56,6 +60,7 @@ col_modified = d.usecase("Modification date", LIST, w=LEAF_W)
 col_uploaded = d.usecase("Uploaded by", LIST, w=LEAF_W)
 col_edited = d.usecase("Edited by", LIST, w=LEAF_W)
 col_size = d.usecase("Size", LIST, w=LEAF_W)
+col_type = d.usecase("File type", LIST, w=LEAF_W)
 cs_text = d.usecase(".cs as text", LIST, w=LEAF_W)
 jpg_image = d.usecase(".jpg as image", LIST, w=LEAF_W)
 
@@ -65,7 +70,7 @@ n_update = d.note("Updates «modification date»\nand «edited by»")
 n_drag_out = d.note("Desktop client only")
 n_sync = d.note("Requires a previously\nbound folder")
 n_auto_track = d.note("Desktop client only")
-n_resolve = d.note("Newest version wins by default;\nthe user may pick a version manually")
+n_sync_rule = d.note("The newest version always wins;\ndeletions are never propagated")
 
 # ---------------------------------------------------------------------------
 # Edges — per-node out-edge order = top-to-bottom order of the children
@@ -96,6 +101,8 @@ d.assoc(columns, col_modified)
 d.assoc(columns, col_uploaded)
 d.assoc(columns, col_edited)
 d.assoc(columns, col_size)
+d.assoc(columns, col_type)
+d.extend(refresh, view)
 d.extend(contents, view)
 d.assoc(contents, cs_text)
 d.assoc(contents, jpg_image)
@@ -113,7 +120,9 @@ d.extend(delete, root)
 d.extend(bind, root)
 d.extend(sync, root)
 d.extend(auto_track, sync)
-d.extend(resolve, sync)
+
+# «extend» off «Log in» — the desktop login screen lets the user point the client at another API
+d.extend(server_addr, login)
 
 # Notes — Graphviz places each one as a leaf hanging off its target.  The login note is pinned
 # above «Log in» instead: as an auto leaf it lands in column 2 and bends the Sort / Filter edges.
@@ -122,7 +131,7 @@ d.note_link(n_update, update, place="auto")
 d.note_link(n_drag_out, drag_out, place="auto")
 d.note_link(n_sync, sync, place="auto")
 d.note_link(n_auto_track, auto_track, place="auto")
-d.note_link(n_resolve, resolve, place="auto")
+d.note_link(n_sync_rule, sync, place="below")
 
 # ---------------------------------------------------------------------------
 d.layout(rankdir="LR", nodesep=0.3, ranksep=0.9)

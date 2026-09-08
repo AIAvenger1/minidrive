@@ -1,13 +1,15 @@
 """09 — Sequence diagram: Upload a file, then view its contents (UC9, UC8).
 
-Participants follow the design spec verbatim (§3.2, §3.4, §4.1): the web page DrivePage
-(boundary; hosts the UploadDropzone, FileTable and PreviewPanel components), DriveViewModel and
-ApiClient (controls) and the grey server-side infrastructure: FilesController, FilesService,
-StorageService, PrismaService.
+The client side is the shared React layer of packages/ui: DriveWorkspace is the boundary that
+owns the seven controls (a page only mounts it), the useDrive hook holds the DriveViewModel and
+does the list refresh, and PreviewPanel loads and renders the selected file on its own.  There is
+no upload() or preview() on the view model: DriveWorkspace talks to ApiClient directly and
+PreviewPanel calls createPreview(entry) itself.
 
-Part 1 (UC9b, drag-and-drop upload) shows the overwrite-vs-create alternative of FilesService.upsert
-(UC10 semantics, spec §3.2) and the list refresh; part 2 (UC8) shows the click-to-preview flow for
-report.cs via createPreview(entry) → TextPreview and GET /files/:id/content.
+Part 1 (UC9b, drag-and-drop upload) shows the client-side size check (splitBySize, 50 MB) and the
+overwrite-vs-create alternative of FilesService.upsert (UC10 semantics, spec §3.2) followed by the
+list refresh; part 2 (UC8) shows the click-to-preview flow for report.cs via createPreview(entry)
+→ TextPreview and GET /files/:id/content.
 """
 import re
 
@@ -18,21 +20,22 @@ q = SequenceDiagram("Sequence diagram — Upload a file, then view its contents 
 
 # ---- participants ------------------------------------------------------------
 user = q.participant("User", "actor")
-page = q.participant("DrivePage", "boundary")
-vm = q.participant("DriveViewModel", "control")
+page = q.participant("DriveWorkspace", "boundary")
+hook = q.participant("useDrive", "control")
+preview = q.participant("PreviewPanel", "boundary")
 api = q.participant("ApiClient", "control")
 ctl = q.participant("FilesController", "participant", INFRA)
 svc = q.participant("FilesService", "participant", INFRA)
 sto = q.participant("StorageService", "participant", INFRA)
 db = q.participant("PrismaService", "participant", INFRA)
 
-# narrow 4-line note: fits between the DrivePage and DriveViewModel lifelines
-q.note(page, "DrivePage hosts\nUploadDropzone,\nFileTable and\nPreviewPanel", w=130)
+# narrow note: fits between the DriveWorkspace and useDrive lifelines
+q.note(page, "DriveWorkspace\n(packages/ui) owns\nUploadDropzone,\nFileTable and\nPreviewPanel;\na page only\nmounts it", w=112)
 
 # ---- Part 1 — UC9 / UC9b: upload by drag-and-drop ---------------------------
 q.message(user, page, "drop report.cs onto the window\n(drag-and-drop)")
-q.message(page, vm, "upload(file)")
-q.message(vm, api, "upload(file)")
+q.self_message(page, "splitBySize(files):\nsize ≤ 50 MB")
+q.message(page, api, "upload(name, file, mimeType)")
 q.message(api, ctl, "POST /files\n(multipart, Bearer)")
 q.message(ctl, svc, "upsert(owner, file)")
 q.message(svc, db, "fileEntry.findUnique(\n{ownerId, name})")
@@ -41,7 +44,7 @@ q.ret(db, svc, "null | FileEntry")
 q.fragment("alt", "[exists] — overwrite (UC10)")
 q.message(svc, sto, "putObject(storageKey, bytes)")
 q.ret(sto, svc)
-q.message(svc, db, "fileEntry.update(\n{updatedAt, modifiedById})")
+q.message(svc, db, "fileEntry.update(\n{size, updatedAt, modifiedById})")
 q.ret(db, svc)
 q.fragment_else("[new] — create")
 q.message(svc, db, "fileEntry.create(...)")
@@ -53,23 +56,27 @@ q.gap(1)  # keep the next return label off the fragment border
 
 q.ret(svc, ctl, "FileDto")
 q.ret(ctl, api, "201 FileDto")
-q.ret(api, vm, "FileDto")
+q.ret(api, page, "FileDto")
 
-# refresh the list after the upload
-q.message(vm, api, "listFiles()")
+# refresh the list after the upload — the hook owns the call, not the view model
+q.message(page, hook, "refresh()")
+q.message(hook, api, "listFiles()")
 q.message(api, ctl, "GET /files")
 q.ret(ctl, api, "FileDto[]")
-q.ret(api, vm, "FileDto[]")
-q.ret(vm, page, "render(visibleFiles)")
+q.ret(api, hook, "FileDto[]")
+q.self_message(hook, "vm.setFiles(files);\nrerender()")
+q.ret(hook, page, "re-render from vm.visibleFiles")
 q.ret(page, user, "report.cs appears in FileTable")
 q.deactivate(user)          # part 1 is over: close the User's activation
 q.gap(2)
 
 # ---- Part 2 — UC8: view the file contents -----------------------------------
 q.message(user, page, "click row report.cs")
-q.message(page, vm, "preview(entry)")
-q.self_message(vm, "createPreview(entry)\n→ TextPreview")
-q.message(vm, api, "download(id)")
+q.message(page, hook, "update(vm => vm.select(file))")
+q.ret(hook, page)
+q.message(page, preview, "file (React prop)")
+q.self_message(preview, "createPreview(entry)\n→ TextPreview")
+q.message(preview, api, "download(id)")
 q.message(api, ctl, "GET /files/:id/content")
 q.message(ctl, svc, "getContent(ownerId, id)")
 q.message(svc, sto, "getObject(storageKey)")
@@ -78,9 +85,9 @@ q.ret(svc, ctl, "Readable")
 q.ret(ctl, api, "200 text/plain stream")
 # note sits right of the (now idle) FilesController, in the gap before FilesService
 q.note(ctl, "for .jpg the same call\nreturns image/jpeg and\nPreviewPanel renders\n<img> (ImagePreview)", w=140)
-q.ret(api, vm, "Blob")
-q.ret(vm, page, "PreviewPanel.showText(content)")
-q.ret(page, user, "file contents shown")
+q.ret(api, preview, "Blob")
+q.self_message(preview, "setResult({kind: 'text', text})")
+q.ret(preview, user, "contents shown in <pre>")
 
 # ---- layout post-processing (library cells only; drawio.py is untouched) -----
 q._build()

@@ -1,25 +1,26 @@
-"""05 — Class diagram: shared package, web client and desktop client (spec §3.3–§3.5).
+"""05 — Class diagram: shared packages, web client and desktop client (spec §3.3–§3.5).
 
-Graphviz LR layout with routed edges; cross-package dependencies are drawn once per package."""
+Four packages, left to right: packages/shared (types and pure modules), packages/ui (the React
+screens both clients render), apps/web and apps/desktop.
+
+The screens are *not* duplicated per client: DriveWorkspace composes the seven controls once in
+packages/ui, and each app only mounts it — the web through its /drive page, the desktop through
+its App shell, which additionally wraps SyncPanel with the platform callbacks (Electron IPC on
+the desktop, the File System Access API in the browser).  packages/shared exports modules of free
+functions rather than utility classes, so they are drawn as «module» boxes.
+
+Graphviz LR layout with routed edges; cross-package «import» is drawn once per package.
+"""
 from _common import *
 
-d = GraphDiagram("Class diagram — shared package, web client and desktop client", routing=ORTHO)
+d = GraphDiagram("Class diagram — shared packages, web client and desktop client", routing=ORTHO)
 
 USE = "«use»"
 OVERRIDES = ["+ canRender(ext): boolean", "+ render(): PreviewResult"]
-# fixed ports: FWD = leave on the right, enter on the left; BACK = the opposite (arrow points left)
-FWD = "exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;"
-BACK = "exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;"
-LBL = "labelBackgroundColor=#ffffff;"
 
 
-def ports(ex, ey, nx, ny):
-    return f"exitX={ex};exitY={ey};exitDx=0;exitDy=0;entryX={nx};entryY={ny};entryDx=0;entryDy=0;"
-
-
-def dep(a, b, label="", back=False, port=None, **kw):
+def dep(a, b, label="", back=False, **kw):
     kw.setdefault("dot_reverse", back)
-    kw.pop("port", None)
     return d.edge(a, b, E_DEPENDENCY, label, **kw)
 
 
@@ -32,166 +33,233 @@ def comp(whole, part, back=False):
 
 
 # =============================================================================
-# packages/shared
+# packages/shared — types and modules of pure functions
 # =============================================================================
 shared = d.group("packages/shared", color=LIST)
 
+file_dto = d.klass("FileDto",
+                   attrs=["id: string", "name: string", "extension: string", "size: number",
+                          "createdAt: string (ISO)", "updatedAt: string (ISO)",
+                          "uploadedBy: string", "modifiedBy: string"],
+                   stereotype="type", color=LIST, group=shared, min_w=170)
+column_visibility = d.klass("ColumnVisibility",
+                            attrs=["Record<ColumnKey, boolean>", "name is always true"],
+                            stereotype="type", color=LIST, group=shared)
+local_file_info = d.klass("LocalFileInfo",
+                          attrs=["name: string", "size: number", "mtime: number (epoch ms)"],
+                          stereotype="type", color=SYNC, group=shared, min_w=170)
+sync_action = d.klass("SyncAction", attrs=["kind: 'upload' | 'download' | 'skip'",
+                                           "name: string", "reason: string"],
+                      stereotype="type", color=SYNC, group=shared, min_w=170)
+sync_plan = d.klass("SyncPlan",
+                    attrs=["uploads: SyncAction[]", "downloads: SyncAction[]", "skipped: SyncAction[]"],
+                    stereotype="type", color=SYNC, group=shared, min_w=170)
 sync_report = d.klass("SyncReport",
                       attrs=["uploaded: number", "downloaded: number", "skipped: number",
                              "failed: number", "errors: string[]"],
-                      stereotype="type", color=SYNC, group=shared, min_w=150)
-sync_action = d.klass("SyncAction", attrs=["kind: SyncActionKind", "name: string", "reason: string"],
-                      stereotype="type", color=SYNC, group=shared, min_w=150)
-sync_plan = d.klass("SyncPlan",
-                    attrs=["uploads: SyncAction[]", "downloads: SyncAction[]", "skipped: SyncAction[]"],
-                    stereotype="type", color=SYNC, group=shared, min_w=150)
-local_file_info = d.klass("LocalFileInfo", attrs=["name: string", "size: number", "mtime: Date"],
-                          stereotype="type", color=SYNC, group=shared, min_w=150)
-sync_ledger = d.klass("SyncLedger",
-                      attrs=["- entries: Map<name, {size, mtime, updatedAt}>"],
-                      methods=["+ reconcileWithLedger(local, ledger)",
-                               "+ recordTransfer(ledger, name, entry)",
-                               "+ pruneLedger(ledger, present)"],
-                      color=SYNC, group=shared, min_w=210)
-file_dto = d.klass("FileDto",
-                   attrs=["id", "name", "extension", "size", "createdAt", "updatedAt",
-                          "uploadedBy", "modifiedBy"],
-                   stereotype="dto", color=LIST, group=shared, min_w=150)
-column_visibility = d.klass("ColumnVisibility",
-                            attrs=["Record<ColumnKey, boolean>", "name: always true"],
-                            stereotype="type", color=LIST, group=shared)
-file_preview = d.klass("FilePreview", attrs=["# entry: FileDto"], methods=OVERRIDES,
-                       stereotype="abstract", color=LIST, group=shared, italic_name=True)
-file_list_utils = d.klass("FileListUtils", methods=[
+                      stereotype="type", color=SYNC, group=shared, min_w=170)
+
+file_list = d.klass("fileList", methods=[
+    "+ extensionOf(name): string",
     "+ sortByName(files, order): FileDto[]",
     "+ filterByType(files, filter): FileDto[]",
-    "+ previewKindOf(name): PreviewKind",
+    "+ isSafeFileName(name): boolean",
+    "+ isSyncableName(name): boolean",
+], stereotype="module", color=LIST, group=shared)
+columns_mod = d.klass("columns", methods=[
+    "+ COLUMN_KEYS / DEFAULT_COLUMNS",
     "+ toggleColumn(visibility, key): ColumnVisibility",
-    "+ computeSyncPlan(local: LocalFileInfo[], remote: FileDto[]): SyncPlan",
-], stereotype="utility", color=LIST, group=shared)
-preview_factory = d.klass("PreviewFactory", methods=["+ createPreview(entry: FileDto): FilePreview"],
-                          stereotype="factory", color=LIST, group=shared)
+], stereotype="module", color=LIST, group=shared)
+limits_mod = d.klass("limits", methods=[
+    "+ MAX_UPLOAD_MB = 50",
+    "+ splitBySize(files): {accepted, rejected}",
+], stereotype="module", color=OPS, group=shared)
+preview_mod = d.klass("preview", methods=[
+    "+ previewKindOf(name): PreviewKind",
+    "+ createPreview(entry: FileDto): FilePreview",
+], stereotype="module", color=LIST, group=shared)
+sync_mod = d.klass("sync", methods=[
+    "+ SKEW_MS = 2000",
+    "+ computeSyncPlan(local, remote): SyncPlan",
+    "+ runSyncPlan(plan, remote, transfers): SyncReport",
+    "+ emptySyncReport() / failedSyncReport()",
+], stereotype="module", color=SYNC, group=shared)
+ledger_mod = d.klass("syncLedger", methods=[
+    "+ SyncLedger = Record<name, entry>",
+    "+ reconcileWithLedger(local, ledger): LocalFileInfo[]",
+    "+ recordTransfer(ledger, name, entry): SyncLedger",
+    "+ pruneLedger(ledger, present): SyncLedger",
+], stereotype="module", color=SYNC, group=shared)
+
+file_preview = d.klass("FilePreview", attrs=["# entry: FileDto"], methods=OVERRIDES,
+                       stereotype="abstract", color=LIST, group=shared, italic_name=True)
 text_preview = d.klass("TextPreview", methods=OVERRIDES, stereotype=".cs, text", color=LIST, group=shared)
 image_preview = d.klass("ImagePreview", methods=OVERRIDES, stereotype=".jpg, image", color=LIST, group=shared)
 
+view_model = d.klass("DriveViewModel",
+                     attrs=["files / order / filter", "columns / selected"],
+                     methods=["+ setFiles / setOrder / setFilter",
+                              "+ toggleColumn / select",
+                              "+ get visibleFiles(): FileDto[]"],
+                     color=LIST, group=shared, min_w=190)
+api_client = d.klass("ApiClient",
+                     attrs=["- baseUrl: string", "- token: string | null"],
+                     methods=["+ register() / login() / me()", "+ listFiles(): FileDto[]",
+                              "+ upload(name, body, mimeType): FileDto",
+                              "+ download(id): Blob", "+ remove(id): void",
+                              "throws ApiError {status}"],
+                     color=ACCESS, group=shared, min_w=190)
+
 comp(sync_plan, sync_action, back=True)
-dep(file_list_utils, sync_plan, "«create»", back=True)
-dep(file_list_utils, local_file_info, back=True)
-dep(file_list_utils, file_dto, back=True)
-dep(file_list_utils, column_visibility, back=True)
-dep(preview_factory, file_preview, "«create»", back=True)
+dep(sync_mod, sync_plan, "«create»", back=True)
+dep(sync_mod, local_file_info, back=True)
+dep(sync_mod, sync_report, back=True)
+dep(ledger_mod, local_file_info, back=True)
+dep(file_list, file_dto, back=True)
+dep(columns_mod, column_visibility, back=True)
+dep(preview_mod, file_preview, "«create»", back=True)
 gen(text_preview, file_preview)
 gen(image_preview, file_preview)
+dep(view_model, file_list, USE, back=True)
+dep(view_model, columns_mod, USE, back=True)
+
+# =============================================================================
+# packages/ui — the React layer both clients render
+# =============================================================================
+ui = d.group("packages/ui — shared React layer", color=LIST)
+
+
+def component(name: str, color: str, group: str, **kw) -> str:
+    return d.klass(name, stereotype="component", color=color, group=group, min_w=150, **kw)
+
+
+login_form = component("LoginForm", ACCESS, ui,
+                       attrs=["baseUrl field (desktop)", "sign up / log in modes"])
+drive_workspace = component("DriveWorkspace", LIST, ui,
+                            attrs=["composes the seven controls",
+                                   "+ uploadFiles / downloadSelected", "+ deleteSelected / logout"])
+u_upload = component("UploadDropzone", OPS, ui)
+u_sort = component("SortControl", LIST, ui)
+u_filter = component("FilterControl", LIST, ui)
+u_columns = component("ColumnToggle", LIST, ui)
+u_table = component("FileTable", LIST, ui)
+u_preview = component("PreviewPanel", LIST, ui)
+u_sync_panel = component("SyncPanel", SYNC, ui,
+                         attrs=["props: pickFolder, synchronize,", "watch, progress, boundFolder",
+                                "renders SyncReportSummary"])
+use_drive = d.klass("useDrive", stereotype="hook", color=LIST, group=ui,
+                    methods=["+ refresh()   (401 → onUnauthorized)",
+                             "+ update(fn): void", "+ vm / busy / error"], min_w=190)
+api_registry = d.klass("apiRegistry", stereotype="module", color=ACCESS, group=ui,
+                       methods=["+ configureApi(baseUrl, token)", "+ getApi(): ApiClient"],
+                       min_w=190)
+
+for c in (u_upload, u_sort, u_filter, u_columns, u_table, u_preview):
+    comp(drive_workspace, c)
+dep(drive_workspace, use_drive, USE)
+dep(drive_workspace, limits_mod, "«use» splitBySize", back=True)
+dep(drive_workspace, api_registry, "«use» getApi")
+dep(login_form, api_registry, "«use» configureApi")
+dep(u_preview, preview_mod, "«use» createPreview", back=True)
+dep(use_drive, view_model, back=True)
+dep(api_registry, api_client, back=True)
 
 # =============================================================================
 # apps/web (Next.js)
 # =============================================================================
 web = d.group("apps/web (Next.js)", color=ACCESS)
 
-
-def component(name: str, color: str, group: str) -> str:
-    return d.klass(name, stereotype="component", color=color, group=group, min_w=140)
-
-
-# column 0 (bottom-to-top): BrowserSyncEngine, DrivePage, LoginPage
+login_page = d.klass("LoginPage", stereotype="page /login", color=ACCESS, group=web, min_w=150)
+drive_page = d.klass("DrivePage", stereotype="page /drive", color=LIST, group=web, min_w=150)
+session_store = d.klass("SessionStore", attrs=["token in localStorage"],
+                        methods=["+ load() / save(token) / clear()",
+                                 "restored by useSession (GET /auth/me)"],
+                        color=ACCESS, group=web)
 browser_sync = d.klass("BrowserSyncEngine",
-                       attrs=["- dirHandle: FileSystemDirectoryHandle"],
-                       methods=["+ pickFolder()", "+ scan(dir): LocalFileInfo[]",
-                                "+ synchronize(dir): SyncReport"],
-                       color=SYNC, group=web, min_w=220)
-drive_page = d.klass("DrivePage", stereotype="page", color=LIST, group=web, min_w=140)
-login_page = d.klass("LoginPage", stereotype="page", color=ACCESS, group=web, min_w=140)
-# column 1 (bottom-to-top): ApiClient, SyncPanel ... FileTable
-api_client = d.klass("ApiClient",
-                     methods=["+ register()", "+ login()", "+ listFiles()", "+ upload(file)",
-                              "+ download(id)", "+ remove(id)"],
-                     color=ACCESS, group=web, min_w=150)
-w_sync_panel = component("SyncPanel", SYNC, web)
-w_upload_dropzone = component("UploadDropzone", OPS, web)
-w_preview_panel = component("PreviewPanel", LIST, web)
-w_filter_control = component("FilterControl", LIST, web)
-w_sort_control = component("SortControl", LIST, web)
-w_column_toggle = component("ColumnToggle", LIST, web)
-w_file_table = component("FileTable", LIST, web)
-drive_workspace = component("DriveWorkspace", LIST, web)
-login_form = component("LoginForm", LIST, web)
-session_store = d.klass("SessionStore", attrs=["- token (localStorage)"],
-                        methods=["+ load()", "+ save(token)", "+ clear()"], color=ACCESS, group=web)
-web_note = d.note("File System Access API (Chrome/Edge);\nno automatic watching;\n"
-                  "mtime kept in a localStorage ledger", group=web)
-ui_note = d.note("shared via packages/ui", group=web)
+                       attrs=["- api: SyncApi", "- ledgers: LedgerStore"],
+                       methods=["+ scan(dir): LocalFileInfo[]",
+                                "+ synchronize(dir, onProgress): SyncReport",
+                                "module: supportsFolderSync / pickFolder"],
+                       color=SYNC, group=web, min_w=200)
+ledger_store = d.klass("localLedgerStore", stereotype="module", color=SYNC, group=web,
+                       methods=["+ load(folder) / save(folder, ledger)   (localStorage)"], min_w=190)
+web_note = d.note("File System Access API (Chrome / Edge only);\nno automatic watching — every run is manual;\n"
+                  "the mtime of a written file is kept in a\nlocalStorage ledger so the next run sees it as Synced",
+                  group=web, w=300)
 
-e_drive_utils = dep(drive_page, file_list_utils, "«use» sortByName, filterByType,\ntoggleColumn, previewKindOf", back=True)
-e_drive_factory = dep(drive_page, preview_factory, "«use» createPreview", back=True)
-e_bsync_utils = dep(browser_sync, file_list_utils, "«use» computeSyncPlan", back=True)
-e_bsync_ledger = dep(browser_sync, sync_ledger, USE, back=True)
-for c in (w_sync_panel, w_upload_dropzone, w_preview_panel, w_filter_control, w_sort_control,
-          w_column_toggle, w_file_table):
-    comp(drive_page, c)
-e_drive_api = dep(drive_page, api_client, USE)
-e_login_api = dep(login_page, api_client, USE)
-e_bsync_api = dep(browser_sync, api_client, USE)
-e_api_session = dep(api_client, session_store, USE)
-e_syncpanel_bsync = dep(w_sync_panel, browser_sync, USE, back=True, port=ports(0, 0.8, 1, 0.8))
+comp(drive_page, drive_workspace)
+comp(drive_page, u_sync_panel)
+comp(login_page, login_form)
+dep(login_page, session_store)
+dep(drive_page, browser_sync)
+dep(browser_sync, sync_mod, "«use» computeSyncPlan,\nrunSyncPlan", back=True)
+dep(browser_sync, ledger_mod, "«use»", back=True)
+dep(browser_sync, ledger_store)
 d.note_link(web_note, browser_sync)
-d.note_link(ui_note, drive_workspace)
-d.note_link(ui_note, login_form)
 
 # =============================================================================
 # apps/desktop (Electron)
 # =============================================================================
 desktop = d.group("apps/desktop (Electron)", color=SYNC)
-renderer_g = d.group("Renderer (React) — same components as apps/web", parent=desktop, color="white")
+renderer_g = d.group("Renderer (React)", parent=desktop, color="white")
 preload_g = d.group("Preload", parent=desktop, color="white")
 main_g = d.group("Main process", parent=desktop, color="white")
 
-# renderer column 0 (bottom-to-top): ApiClient, SyncPanel ... FileTable; column 1: SessionStore
-r_api_client = d.klass("ApiClient", color=ACCESS, group=renderer_g, min_w=140)
-r_sync_panel = component("SyncPanel", SYNC, renderer_g)
-r_upload_dropzone = component("UploadDropzone", OPS, renderer_g)
-r_preview_panel = component("PreviewPanel", LIST, renderer_g)
-r_filter_control = component("FilterControl", LIST, renderer_g)
-r_sort_control = component("SortControl", LIST, renderer_g)
-r_column_toggle = component("ColumnToggle", LIST, renderer_g)
-r_file_table = component("FileTable", LIST, renderer_g)
-r_session_store = d.klass("SessionStore", attrs=["- token (safeStorage)"], color=ACCESS, group=renderer_g)
+r_app = d.klass("App", stereotype="shell", color=ACCESS, group=renderer_g,
+                methods=["+ mounts LoginForm | DriveWorkspace"], min_w=170)
+r_sync_panel = d.klass("SyncPanel", stereotype="wrapper", color=SYNC, group=renderer_g,
+                       methods=["+ binds SyncPanel to window.minidrive"], min_w=170)
+r_session = d.klass("SessionStore", attrs=["token via IPC"],
+                    methods=["+ load() / save(token) / clear()"], color=ACCESS, group=renderer_g)
 
-preload_bridge = d.klass("PreloadBridge", attrs=["+ minidrive: window API"], color=INFRA, group=preload_g)
+preload_bridge = d.klass("PreloadBridge", attrs=["+ window.minidrive: contextBridge API"],
+                         color=INFRA, group=preload_g, min_w=190)
 
-ipc_handlers = d.klass("IpcHandlers", color=INFRA, group=main_g, min_w=140)
-drag_out_handler = d.klass("DragOutHandler", methods=["+ startDrag(fileId)"], color=OPS, group=main_g)
-local_folder_scanner = d.klass("LocalFolderScanner", methods=["+ scan(path): LocalFileInfo[]"],
-                               color=SYNC, group=main_g)
-sync_engine = d.klass("SyncEngine", attrs=["- localFolder"],
-                      methods=["+ scan()", "+ synchronize(): SyncReport", "+ startWatching()",
-                               "+ stopWatching()"], color=SYNC, group=main_g)
-main_window = d.klass("MainWindow", color=INFRA, group=main_g, min_w=140)
-folder_watcher = d.klass("FolderWatcher", methods=["+ watch(path, onChange)"], color=SYNC, group=main_g)
+main_window = d.klass("createWindow", stereotype="function", color=INFRA, group=main_g, min_w=150)
+ipc_handlers = d.klass("registerIpc", stereotype="function", color=INFRA, group=main_g,
+                       methods=["+ sync:run / sync:watch / sync:pick",
+                                "+ session:* / file:drag"], min_w=190)
+settings = d.klass("settings", stereotype="module", color=INFRA, group=main_g,
+                   methods=["+ baseUrl / boundFolder / autoWatch",
+                            "+ token encrypted (safeStorage)"], min_w=190)
+drag_out_handler = d.klass("dragOutHandler", stereotype="module", color=OPS, group=main_g,
+                           methods=["+ startDrag(sender, api, file)"], min_w=190)
+local_folder_scanner = d.klass("LocalFolderScanner", stereotype="module", color=SYNC, group=main_g,
+                               methods=["+ scan(dir): LocalFileInfo[]"], min_w=190)
+sync_engine = d.klass("SyncEngine",
+                      attrs=["- api: SyncApi", "- scanner"],
+                      methods=["+ scan(dir): LocalFileInfo[]",
+                               "+ synchronize(dir, onProgress): SyncReport"],
+                      color=SYNC, group=main_g, min_w=190)
+folder_watcher = d.klass("FolderWatcher",
+                         methods=["+ start(dir, onChange) / stop()", "+ pause() / resume()",
+                                  "+ get active(): boolean"],
+                         color=SYNC, group=main_g, min_w=190)
 
-# renderer -> shared
-e_rtable_utils = dep(r_file_table, file_list_utils, "«use» sortByName, filterByType,\ntoggleColumn", back=True)
-e_rpreview_factory = dep(r_preview_panel, preview_factory, "«use» createPreview", back=True)
-# renderer -> preload -> main (dependency chain)
-e_rsync_preload = dep(r_sync_panel, preload_bridge, USE)
-e_rtable_preload = dep(r_file_table, preload_bridge, "«use» startDrag")
-e_rapi_session = dep(r_api_client, r_session_store, USE)
-e_preload_ipc = dep(preload_bridge, ipc_handlers, "«ipc» invoke")
-# IpcHandlers -> SyncEngine, DragOutHandler, LocalFolderScanner (declared bottom-to-top)
-e_ipc_drag = dep(ipc_handlers, drag_out_handler, USE)
-e_ipc_scanner = dep(ipc_handlers, local_folder_scanner, USE)
-e_ipc_sync = dep(ipc_handlers, sync_engine, USE)
-# SyncEngine -> LocalFolderScanner (same column, vertical), FolderWatcher; DragOutHandler -> MainWindow
-e_sync_scanner = dep(sync_engine, local_folder_scanner, USE, constraint=False, port=ports(0.5, 1, 0.5, 0))
-e_sync_watcher = dep(sync_engine, folder_watcher, USE)
-e_drag_window = dep(drag_out_handler, main_window, "«use» webContents.startDrag")
-# main -> shared (routed around the main-process box after layout)
-e_sync_utils = dep(sync_engine, file_list_utils, "«use» computeSyncPlan", back=True)
+comp(r_app, drive_workspace)
+dep(r_app, login_form)
+comp(r_sync_panel, u_sync_panel)
+dep(r_app, r_session)
+dep(r_sync_panel, preload_bridge)
+dep(r_session, preload_bridge)
+dep(preload_bridge, ipc_handlers, "«ipc» invoke / on")
+dep(ipc_handlers, sync_engine, USE)
+dep(ipc_handlers, folder_watcher, USE)
+dep(ipc_handlers, drag_out_handler, USE)
+dep(ipc_handlers, settings, USE)
+dep(sync_engine, local_folder_scanner, USE)
+dep(sync_engine, sync_mod, "«use» computeSyncPlan,\nrunSyncPlan", back=True)
+dep(drag_out_handler, main_window, "«use» startDrag")
 
 d.legend("Colours: blue = access / session, green = file list, sort, filter, preview, "
          "yellow = upload / download, purple = synchronization, grey = infrastructure.\n"
-         "Dashed open arrow = dependency («use»), hollow triangle = generalization, "
-         "filled diamond = composition.", w=560)
+         "Dashed open arrow = dependency («use», «create», «import»), hollow triangle = generalization, "
+         "filled diamond = composition.\n"
+         "«module» = a TypeScript module of exported functions and constants (there are no utility "
+         "classes); «component» / «hook» = React.\n"
+         "packages/ui holds every screen: both clients mount the same LoginForm, DriveWorkspace and "
+         "SyncPanel and differ only in the platform callbacks.", w=760)
 
-d.layout(rankdir="LR", nodesep=0.4, ranksep=1.0)
+d.layout(rankdir="LR", nodesep=0.35, ranksep=0.5)
 
 d.save(OUT("05-class-clients"))

@@ -3,11 +3,14 @@
 Lanes: User | Desktop client (Renderer) | Desktop client (Main / SyncEngine) | API.
 Layout is a (lane, row) grid with one node per cell.  Every bent flow carries explicit
 waypoints (absolute page coordinates from X()/Y(), which mirror ActivityDiagram._place)
-so that no flow passes through another node.  The plan-execution loop is drawn with the
-UML loop idiom: a merge node sits directly above the "[next action?]" decision and
-receives both the entry flow and the "[more actions?] [yes]" back-edge, which runs along
-the right side of the API lane.  Each decision therefore has one entry and every exit
-leaves from its own corner (no two guards share a segment).
+so that no flow passes through another node.
+
+runSyncPlan does not iterate over a single mixed list: the skipped actions are counted once
+up front and then two independent loops run, first every upload and then every download.  The
+diagram follows that shape — two UML loop idioms in a row, each with a merge above its
+"[more …?]" decision; the back-edge leaves the last action of the body downwards and runs up
+the outer channel of the API lane, the exit runs down the left channel of the Main lane.  There
+is no plan preview: the panel shows a progress bar during the run and the report after it.
 """
 from _common import *
 
@@ -78,24 +81,31 @@ lst = a.action("GET /files\n(list remote FileDto[])", API, 7, LIST)
 join = a.bar(MAIN, 8, w=220)
 plan = a.action("computeSyncPlan(local, remote)", MAIN, 9, SYNC)
 n_rules = a.note("only local → upload;\nonly remote → download;\nboth: same size and\n"
-                 "|mtime − updatedAt| ≤ 2 s → skip,\nelse newest wins;\ndeletions never propagate",
+                 "|mtime − updatedAt| ≤ 2 s → skip;\nunparsable remote updatedAt\n→ download;\n"
+                 "else the newer side wins;\ndeletions never propagate",
                  API, 9, w=200)
-show = a.action("Show plan:\nuploads / downloads / skipped", REN, 10, SYNC)
+n_ledger = a.note("Web client only: the plan is\nbuilt from reconcileWithLedger(\n"
+                  "scanned, ledger); recordTransfer\nand pruneLedger keep the\n"
+                  "localStorage ledger in step", REN, 10, w=200)
+skipped = a.action("report.skipped =\nplan.skipped.length", MAIN, 10, SYNC)
 
-# execute the plan: loop over SyncAction[]
-m_loop = a.merge(MAIN, 11)
-d_next = decision("[next action?]", MAIN, 12, "upper-left")
-# API actions are narrowed and shifted left so that two vertical channels fit on the
-# right of the API lane: X_RIGHT (Update FileEntry → merge) and X_BACK (loop back-edge).
+# execute the plan: first every upload, then every download (runSyncPlan)
+# API actions are narrowed and shifted left so that a vertical channel fits on the right of
+# the API lane for the two loop back-edges.
 API_DX, API_W = -30, 150
+m_up = a.merge(MAIN, 11)
+d_up = decision("[more uploads?]", MAIN, 12, "upper-left")
 post = a.action("POST /files\n(multipart)", API, 12, OPS, w=API_W, dx=API_DX)
-upd = a.action("Update FileEntry\n(updatedAt,\nmodifiedBy)", API, 13, OPS, w=API_W, h=56, dx=API_DX)
-get = a.action("GET\n/files/:id/content", API, 14, OPS, w=API_W, dx=API_DX)
-write = a.action("Write file,\nset mtime = updatedAt", MAIN, 15, SYNC)
-m_next = a.merge(MAIN, 16)
-d_more = decision("[more actions?]", MAIN, 17, "below")
-report = a.action("Show SyncReport", REN, 17, SYNC)
-e = a.end(REN, 18)
+upd = a.action("Update FileEntry\n(size, updatedAt,\nmodifiedBy)", API, 13, OPS, w=API_W, h=56, dx=API_DX)
+utimes = a.action("utimes(mtime = updatedAt)", MAIN, 14, SYNC)
+
+m_dn = a.merge(MAIN, 16)
+d_dn = decision("[more downloads?]", MAIN, 17, "upper-left")
+get = a.action("GET\n/files/:id/content", API, 17, OPS, w=API_W, dx=API_DX)
+write = a.action("Write file,\nset mtime = updatedAt", MAIN, 18, SYNC)
+
+report = a.action("Show SyncReport", REN, 20, SYNC)
+e = a.end(REN, 21)
 
 # ---------------------------------------------------------------------------
 # Flows
@@ -116,28 +126,32 @@ down(scan, join)
 a.flow(lst, join, points=[(X(API), Y(8))], exit_=(0.5, 1), entry=(1, 0.5))
 down(join, plan)
 a.note_link(n_rules, plan)
+a.note_link(n_ledger, plan)
+down(plan, skipped)
+down(skipped, m_up)
 
-a.flow(plan, show, points=[(X(REN), Y(9))], exit_=(0, 0.5), entry=(0.5, 0))
-a.flow(show, m_loop, points=[(X(REN), Y(11))], exit_=(0.5, 1), entry=(0, 0.5))
-down(m_loop, d_next)
+X_LEFT = X(MAIN, -105)                 # left channel of the Main lane (loop exits)
+X_BACK = X(API, 110)                   # outermost channel of the API lane (loop back-edges)
 
-# three-way split: right = upload, bottom = download, left = skip
-X_SKIP = X(MAIN, -105)                 # left channel of the Main lane
-X_RIGHT = X(API, 70)                   # right channel of the API lane
-X_BACK = X(API, 110)                   # outermost channel of the API lane (back-edge)
-right(d_next, post, "[upload]")
-f_download = a.flow(d_next, get, points=[(X(MAIN), Y(14))], exit_=(0.5, 1), entry=(0, 0.5))
-f_skip = a.flow(d_next, m_next, points=[(X_SKIP, Y(12)), (X_SKIP, Y(16))], exit_=(0, 0.5), entry=(0, 0.5))
-
+# ---- loop 1: every upload -------------------------------------------------
+down(m_up, d_up)
+right(d_up, post, "[yes]")
 down(post, upd)
-a.flow(upd, m_next, points=[(X_RIGHT, Y(13)), (X_RIGHT, Y(16))], exit_=(1, 0.5), entry=(1, 0.5))
-a.flow(get, write, points=[(X(API, API_DX), Y(15))], exit_=(0.5, 1), entry=(1, 0.5))
-down(write, m_next)
-down(m_next, d_more)
+a.flow(upd, utimes, points=[(X(API, API_DX), Y(14))], exit_=(0.5, 1), entry=(1, 0.5))
+# the back-edge leaves downwards into the gap between two rows, so it never shares the
+# y of the "Update FileEntry → utimes" segment
+a.flow(utimes, m_up, points=[(X(MAIN), Y(14, 42)), (X_BACK, Y(14, 42)), (X_BACK, Y(11))],
+       exit_=(0.5, 1), entry=(1, 0.5))
+f_up_done = a.flow(d_up, m_dn, points=[(X_LEFT, Y(12)), (X_LEFT, Y(16))], exit_=(0, 0.5), entry=(0, 0.5))
 
-# back-edge of the loop: right, up along the right side of the API lane, into the merge
-f_more = a.flow(d_more, m_loop, points=[(X_BACK, Y(17)), (X_BACK, Y(11))], exit_=(1, 0.5), entry=(1, 0.5))
-left(d_more, report, "[no]")
+# ---- loop 2: every download ------------------------------------------------
+down(m_dn, d_dn)
+right(d_dn, get, "[yes]")
+a.flow(get, write, points=[(X(API, API_DX), Y(18))], exit_=(0.5, 1), entry=(1, 0.5))
+a.flow(write, m_dn, points=[(X(MAIN), Y(18, 42)), (X_BACK, Y(18, 42)), (X_BACK, Y(16))],
+       exit_=(0.5, 1), entry=(1, 0.5))
+f_dn_done = a.flow(d_dn, report, points=[(X_LEFT, Y(17)), (X_LEFT, Y(20))], exit_=(0, 0.5), entry=(1, 0.5))
+
 down(report, e)
 
 # Guards of the L-shaped flows are attached as positioned edge labels near the source end
@@ -146,8 +160,7 @@ down(report, e)
 a._build()
 a.add_edge_label(f_no_bound, "[no]", pos=-0.7)
 a.add_edge_label(f_yes_bound, "[yes]", pos=-0.85)
-a.add_edge_label(f_download, "[download]", pos=-0.7)
-a.add_edge_label(f_skip, "[skip]", pos=-0.85)
-a.add_edge_label(f_more, "[yes]", pos=-0.93)
+a.add_edge_label(f_up_done, "[no]", pos=-0.85)
+a.add_edge_label(f_dn_done, "[no]", pos=-0.85)
 
 a.save(OUT("06-activity-sync"))

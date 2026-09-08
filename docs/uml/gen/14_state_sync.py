@@ -29,7 +29,10 @@ d = GraphDiagram("State diagram — synchronization session (SyncEngine)", routi
 start = d.initial()
 end = d.final()
 idle = d.state("Idle", color=SYNC)
-watching = d.state("Watching", ["do / FolderWatcher.watch(path)"], SYNC)
+watching = d.state("Watching",
+                   ["do / FolderWatcher.start(dir, onChange)",
+                    "paused while a run is in progress,",
+                    "resumed 3 s after it (cooldown)"], SYNC)
 picking = d.state("PickingFolder", ["do / dialog.showOpenDialog"], ACCESS)
 scanning = d.state("Scanning", ["do / LocalFolderScanner.scan()", "do / ApiClient.listFiles()"], SYNC)
 planning = d.state("Planning", ["do / computeSyncPlan()"], SYNC)
@@ -46,23 +49,23 @@ d.transition(start, idle)
 d.transition(idle, end, "app quit", dot_reverse=True)            # final sits in column 0, under initial
 
 # Idle -> column 2 / Scanning
-d.transition(idle, watching, "startWatching()")
+d.transition(idle, watching, "sync.watch(true)\n/ FolderWatcher.start()")
 d.transition(idle, scanning, "synchronize()\n[folder bound]")
 d.transition(idle, picking, "synchronize()\n[no folder]")
 
 # short returns to Idle: arcs bent into the wedge between the forward transition and the
 # Idle -> Scanning line, labels shifted towards the source so they sit where the wedge is wide
-e_stop = d.transition(watching, idle, "stopWatching()", bend=-36, label_offset=(-0.35, 0))
+e_stop = d.transition(watching, idle, "sync.watch(false)\n/ FolderWatcher.stop()",
+                      bend=-36, label_offset=(-0.35, 0))
 e_cancel = d.transition(picking, idle, "cancelled", bend=36, label_offset=(-0.35, 0))
 
 # into the main chain
 d.transition(watching, scanning, "fs event\n(debounced 2 s)")
 d.transition(picking, scanning, "folder chosen\n/ save path")
 d.transition(scanning, planning, "local + remote lists")
-d.transition(planning, completed, "[no actions]")                # declared first -> stays above Transferring
-d.transition(planning, transferring, "plan ready\n[actions > 0]")
+d.transition(planning, transferring, "plan ready\n(runSyncPlan; an empty\nplan runs too)")
 d.transition(transferring, completed, "all actions done")
-d.transition(transferring, failed, "network / IO error")
+d.transition(transferring, failed, "the whole run throws\n/ failedSyncReport")
 
 # long loop-backs, routed by hand after layout (see route() below)
 e_done = d.transition(completed, idle, "report shown")
@@ -75,10 +78,13 @@ for e in (e_stop, e_cancel, e_done, e_fail, e_watch):
 # ---------------------------------------------------------------------------
 # Legend
 # ---------------------------------------------------------------------------
+n_fail = d.note("A failed upload or download is caught per action:\nit is counted in SyncReport.failed / errors and the run\nstill ends in Completed.  Failed is reached only when the\nwhole run throws (no folder, IPC error) — the report is\nthen failedSyncReport(message).", w=330)
+d.note_link(n_fail, failed, place="right")
+
 legend = d.legend(
     "Notation: rounded rectangle = state (do / … = activity while in the state, exit / … = action on leaving);\n"
     "filled circle = initial pseudo-state; bull's-eye = final state; arrow = transition «event [guard] / action».\n"
-    "Colours: purple = synchronization, blue = folder picker dialog, green = successful completion, red = error.\n"
+    "Colours: purple = synchronization, blue = folder picker dialog, green = completion, red = aborted run.\n"
     "Watching (FolderWatcher, UC14a) exists in the desktop client only; the web client always returns to Idle.",
     w=680)
 

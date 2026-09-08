@@ -1,8 +1,11 @@
 """08 — Sequence diagram: Sign up (UC1) and Log in (UC2).
 
-Participants follow §3.2 / §3.4 of the design spec verbatim:
-LoginPage (web page /login), ApiClient (fetch wrapper), AuthController, AuthService,
-UsersService, PrismaService.  Server-side participants are grey (infrastructure group).
+Participants follow §3.2 / §3.4 of the design spec: LoginPage (the /login route, which only
+mounts the shared LoginForm of packages/ui), ApiClient (fetch wrapper, packages/shared),
+AuthController, AuthService, UsersService, PrismaService.  Server-side participants are grey.
+
+AuthController.login() calls AuthService.login(dto); validateUser() is a step inside it, not a
+separate controller call.  The token is stored by the page (SessionStore.save), not by ApiClient.
 """
 from _common import *  # noqa: F401,F403
 
@@ -16,6 +19,8 @@ ctl = q.participant("AuthController", "participant", INFRA)
 auth = q.participant("AuthService", "participant", INFRA)
 users = q.participant("UsersService", "participant", INFRA)
 prisma = q.participant("PrismaService", "participant", INFRA)
+
+q.note(page, "the /login route\nonly mounts\nLoginForm\n(packages/ui) and\nstores the token\nafterwards", w=112)
 
 # ---- Part 1: sign up (UC1) -------------------------------------------------
 q.fragment("opt", "[new user]")
@@ -39,7 +44,7 @@ q.message(auth, users, "create(username,\nhash(password))")
 q.message(users, prisma, "user.create()")
 q.ret(prisma, users, "User")
 q.ret(users, auth)
-q.self_message(auth, "signJwt(user)")
+q.self_message(auth, "issue(user):\njwt.sign({sub, username})")
 q.ret(auth, ctl, "AuthResponseDto")
 q.end_fragment()
 q.gap(1)                       # keep the next label off the alt frame border
@@ -55,7 +60,8 @@ q.gap(2)
 q.message(u, page, "enter credentials;\nclick Log in")
 q.message(page, api, "login(username, password)")
 q.message(api, ctl, "POST /auth/login")
-q.message(ctl, auth, "validateUser(username,\npassword)")
+q.message(ctl, auth, "login(dto)")
+q.self_message(auth, "validateUser(dto.username,\ndto.password)")
 q.message(auth, users, "findByUsername(username)")
 q.message(users, prisma, "user.findUnique()")
 q.ret(prisma, users, "User | null")
@@ -64,12 +70,12 @@ q.message(auth, users, "verify(password,\npasswordHash)")
 q.ret(users, auth, "boolean")
 
 q.fragment("alt", "[valid]")
-q.self_message(auth, "signJwt(user)")
+q.self_message(auth, "issue(user):\njwt.sign({sub, username})")
 q.ret(auth, ctl, "AuthResponseDto\n{accessToken, user}")
 q.ret(ctl, api, "200 AuthResponseDto")
-q.self_message(api, "SessionStore.set(token)")
 q.note(api, "JWT HS256, 24 h,\nsent as\nAuthorization: Bearer", w=140)
-q.ret(api, page, "session")
+q.ret(api, page, "AuthResponseDto")
+q.self_message(page, "SessionStore.save(token);\nconfigureApi(baseUrl, token)")
 q.ret(page, u, "navigate to /drive (cabinet)")
 q.fragment_else("[invalid]")
 q.gap(1)
