@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { UserDto } from '@minidrive/shared';
+import { ApiError, type UserDto } from '@minidrive/shared';
 import { getApi } from './api';
 import { LoginScreen } from './screens/LoginScreen';
 import { DriveScreen } from './screens/DriveScreen';
@@ -14,7 +14,9 @@ export default function App() {
       .then(async (s) => {
         if (s.token) setUser(await getApi().me());
       })
-      .catch(() => SessionStore.clear())
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) SessionStore.clear();
+      })
       .finally(() => setReady(true));
   }, []);
 

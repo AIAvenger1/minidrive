@@ -1,0 +1,19 @@
+.toolbar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.columns { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+
+.dropzone { position: relative; min-height: 200px; overflow: auto; background: #fff; border: 1px solid #d9dde6; border-radius: 8px; }
+.dropzone.over { outline: 2px dashed #3d5a99; }
+.drop-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(61, 90, 153, .08); font-weight: 600; pointer-events: none; }
+table.files { width: 100%; border-collapse: collapse; }
+table.files th, table.files td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #eceff4; white-space: nowrap; }
+table.files tbody tr { cursor: pointer; }
+table.files tbody tr:nth-child(even) { background: #fafbfd; }
+table.files tbody tr.selected { background: #dae8fc; }
+table.files td.empty { color: #7b8497; text-align: center; padding: 24px; }
+
+.preview { overflow: auto; padding: 12px; background: #fff; border: 1px solid #d9dde6; border-radius: 8px; }
+.preview.empty { color: #7b8497; }
+.preview dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0 0 12px; }
+.preview dt { color: #7b8497; } .preview dd { margin: 0; }
+.preview pre { font: 12px/1.5 Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+.preview img { max-width: 100%; height: auto; }
