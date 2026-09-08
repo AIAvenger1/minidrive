@@ -23,7 +23,7 @@ yarn workspace @minidrive/desktop dev
 
 Веб-клієнт: `cp apps/web/.env.example apps/web/.env.local`, потім `yarn web:dev` і відкрити `http://localhost:3001`.
 
-Тести: `yarn test` з кореня. Пакування десктоп-клієнта: `yarn workspace @minidrive/desktop build:mac` (або `build:win`/`build:linux`) — результат: `apps/desktop/dist/MiniDrive-1.0.0-arm64.dmg` і `apps/desktop/dist/MiniDrive-1.0.0-arm64.zip`. Детальніше — у звітах `docs/reports/stage1-uml.md`, `docs/reports/stage2-desktop.md` та `docs/reports/stage3-web.md`.
+Тести: `yarn test` з кореня. Пакування десктоп-клієнта: `yarn workspace @minidrive/desktop build:mac` (або `build:win`/`build:linux`) — результат: `apps/desktop/dist/MiniDrive-1.0.0-arm64.dmg` і `apps/desktop/dist/MiniDrive-1.0.0-arm64.zip`. Детальніше — у звітах `docs/reports/stage1-uml.md`, `docs/reports/stage2-desktop.md`, `docs/reports/stage3-web.md` та `docs/reports/stage4-comparison.md`.
 
 ## Розгортання (production)
 
