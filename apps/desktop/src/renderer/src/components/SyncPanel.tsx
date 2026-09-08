@@ -6,6 +6,7 @@ export function SyncPanel({ onSynced }: { onSynced: () => void }) {
   const [folder, setFolder] = useState<string | null>(null);
   const [autoWatch, setAutoWatch] = useState(false);
   const [externalReport, setExternalReport] = useState<SyncReport | null>(null);
+  const [externalError, setExternalError] = useState<string | null>(null);
 
   useEffect(() => {
     window.minidrive.sync
@@ -14,7 +15,7 @@ export function SyncPanel({ onSynced }: { onSynced: () => void }) {
         setFolder(s.boundFolder);
         setAutoWatch(s.autoWatch);
       })
-      .catch(() => {});
+      .catch((err) => setExternalError((err as Error).message));
     const offAuto = window.minidrive.sync.onAutoSync((r) => {
       setExternalReport(r);
       onSynced();
@@ -42,8 +43,9 @@ export function SyncPanel({ onSynced }: { onSynced: () => void }) {
   async function toggleWatch(enabled: boolean) {
     try {
       setAutoWatch(await window.minidrive.sync.watch(enabled));
-    } catch {
+    } catch (err) {
       setAutoWatch(!enabled);
+      setExternalError((err as Error).message);
     }
   }
 
@@ -54,6 +56,7 @@ export function SyncPanel({ onSynced }: { onSynced: () => void }) {
       runSync={runSync}
       onSynced={onSynced}
       externalReport={externalReport}
+      externalError={externalError}
       extraControls={
         <div className="flex items-center gap-2">
           <Checkbox id="auto-watch" checked={autoWatch} disabled={!folder} onCheckedChange={(v) => toggleWatch(Boolean(v))} />

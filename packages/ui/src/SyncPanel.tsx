@@ -14,6 +14,7 @@ export type SyncPanelProps = {
   extraControls?: ReactNode;
   unsupportedMessage?: string;
   externalReport?: SyncReport | null;
+  externalError?: string | null;
 };
 
 export function SyncPanel({
@@ -24,6 +25,7 @@ export function SyncPanel({
   extraControls,
   unsupportedMessage,
   externalReport,
+  externalError,
 }: SyncPanelProps) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -33,6 +35,10 @@ export function SyncPanel({
   useEffect(() => {
     if (externalReport) setReport(externalReport);
   }, [externalReport]);
+
+  useEffect(() => {
+    if (externalError) setError(externalError);
+  }, [externalError]);
 
   if (unsupportedMessage) {
     return (
