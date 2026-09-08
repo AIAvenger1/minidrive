@@ -94,7 +94,7 @@ export function LoginForm({ apiUrl: initialApiUrl, allowServerChange = false, on
           <Button type="submit" disabled={busy}>
             {mode === 'login' ? 'Увійти' : 'Зареєструватися'}
           </Button>
-          <Button type="button" variant="link" onClick={switchMode}>
+          <Button type="button" variant="link" className="h-auto whitespace-normal" onClick={switchMode}>
             {mode === 'login' ? 'Немає облікового запису? Зареєструватися' : 'Уже є обліковий запис? Увійти'}
           </Button>
         </form>
