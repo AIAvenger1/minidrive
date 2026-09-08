@@ -5,6 +5,11 @@ import {
 import { Readable } from 'stream';
 import { loadConfig } from '../config';
 
+function isMissingBucketError(err: unknown): boolean {
+  const e = err as { $metadata?: { httpStatusCode?: number }; name?: string };
+  return e?.$metadata?.httpStatusCode === 404 || e?.name === 'NotFound' || e?.name === 'NoSuchBucket';
+}
+
 @Injectable()
 export class StorageService implements OnModuleInit {
   constructor(private readonly s3: S3Client, private readonly bucket: string) {}
@@ -24,7 +29,7 @@ export class StorageService implements OnModuleInit {
     try {
       await this.s3.send(new HeadBucketCommand({ Bucket: this.bucket }));
     } catch (err) {
-      if (err?.$metadata?.httpStatusCode === 404 || err?.name === 'NotFound' || err?.name === 'NoSuchBucket') {
+      if (isMissingBucketError(err)) {
         await this.s3.send(new CreateBucketCommand({ Bucket: this.bucket }));
       } else {
         throw err;
