@@ -25,6 +25,10 @@ yarn workspace @minidrive/desktop dev
 
 Тести: `yarn test` з кореня. Пакування десктоп-клієнта: `yarn workspace @minidrive/desktop build:mac` (або `build:win`/`build:linux`) — результат: `apps/desktop/dist/MiniDrive-1.0.0-arm64.dmg` і `apps/desktop/dist/MiniDrive-1.0.0-arm64.zip`. Детальніше — у звітах `docs/reports/stage1-uml.md`, `docs/reports/stage2-desktop.md`, `docs/reports/stage3-web.md` та `docs/reports/stage4-comparison.md`.
 
+## Готова збірка десктоп-клієнта
+
+Зібраний застосунок для macOS (Apple Silicon) лежить у релізах GitHub: <https://github.com/AIAvenger1/minidrive/releases> (`MiniDrive-<версія>-arm64.dmg`). Збірка не підписана сертифікатом Apple, тому при першому запуску потрібно клацнути правою кнопкою по MiniDrive.app → «Відкрити» або виконати `xattr -d com.apple.quarantine /Applications/MiniDrive.app`. Пакований застосунок за замовчуванням підключається до <https://minidrive.trelawney.tech/api>; адресу можна змінити на екрані входу.
+
 ## Розгортання (production)
 
 ```bash

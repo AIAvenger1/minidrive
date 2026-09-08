@@ -1,10 +1,12 @@
 import Store from 'electron-store';
-import { safeStorage } from 'electron';
+import { app, safeStorage } from 'electron';
 
 export type Settings = { apiUrl: string; token: string | null; boundFolder: string | null; autoWatch: boolean };
 
+export const DEFAULT_API_URL = app.isPackaged ? 'https://minidrive.trelawney.tech/api' : 'http://localhost:3000';
+
 const store = new Store<{ apiUrl: string; tokenEncrypted: string | null; boundFolder: string | null; autoWatch: boolean }>({
-  defaults: { apiUrl: 'http://localhost:3000', tokenEncrypted: null, boundFolder: null, autoWatch: false },
+  defaults: { apiUrl: DEFAULT_API_URL, tokenEncrypted: null, boundFolder: null, autoWatch: false },
 });
 
 export function getSettings(): Settings {
