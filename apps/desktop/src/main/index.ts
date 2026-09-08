@@ -1,8 +1,7 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'path';
-import { promises as fs } from 'fs';
 import { electronApp, is, optimizer } from '@electron-toolkit/utils';
-import { getSettings, setToken, updateSettings } from './settings';
+import { registerIpc } from './ipc';
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -25,25 +24,11 @@ function createWindow(): BrowserWindow {
   return win;
 }
 
-function registerIpc(): void {
-  ipcMain.handle('settings:get', () => getSettings());
-  ipcMain.handle('settings:set', (_e, patch) => updateSettings(patch));
-  ipcMain.handle('session:setToken', (_e, token: string | null) => setToken(token));
-  ipcMain.handle('session:getToken', () => getSettings().token);
-  ipcMain.handle('file:saveAs', async (e, name: string, bytes: ArrayBuffer) => {
-    const win = BrowserWindow.fromWebContents(e.sender);
-    const { canceled, filePath } = await dialog.showSaveDialog(win!, { defaultPath: name });
-    if (canceled || !filePath) return null;
-    await fs.writeFile(filePath, Buffer.from(bytes));
-    return filePath;
-  });
-}
-
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('ua.knu.minidrive');
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window));
-  registerIpc();
-  createWindow();
+  const win = createWindow();
+  registerIpc(win);
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

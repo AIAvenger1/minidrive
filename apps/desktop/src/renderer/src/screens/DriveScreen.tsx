@@ -71,7 +71,16 @@ export function DriveScreen({ user, onLogout }: Props) {
       {error && <p className="error">{error}</p>}
       <div className="drive-body">
         <UploadDropzone onFiles={uploadFiles} busy={working}>
-          <FileTable files={vm.visibleFiles} columns={vm.columns} selected={vm.selected} onSelect={(f) => update((m) => m.select(f))} />
+          <FileTable
+            files={vm.visibleFiles}
+            columns={vm.columns}
+            selected={vm.selected}
+            onSelect={(f) => update((m) => m.select(f))}
+            onDragStart={(f, e) => {
+              e.preventDefault();
+              window.minidrive.file.dragOut(f);
+            }}
+          />
         </UploadDropzone>
         <PreviewPanel file={vm.selected} loadContent={loadContent} />
       </div>

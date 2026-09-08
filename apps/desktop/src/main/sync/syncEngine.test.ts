@@ -1,6 +1,6 @@
-import { mkdtemp, readFile, stat, utimes, writeFile } from 'fs/promises';
+import { mkdtemp, readdir, readFile, stat, utimes, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import { describe, expect, it } from 'vitest';
 import type { FileDto } from '@minidrive/shared';
 import { SyncEngine } from './syncEngine';
@@ -53,5 +53,14 @@ describe('SyncEngine', () => {
     const report = await new SyncEngine(api).synchronize(dir);
     expect(report.failed).toBe(1);
     expect(report.errors[0]).toContain('a.txt');
+  });
+
+  it('refuses to write a remote file whose name escapes the target directory', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'minidrive-'));
+    const api = fakeApi([remoteFile('../escape.txt', 'evil', new Date().toISOString())]);
+    const report = await new SyncEngine(api).synchronize(dir);
+    expect(report.failed).toBe(1);
+    expect(report.errors[0]).toContain('unsafe file name');
+    expect(await readdir(dirname(dir))).not.toContain('escape.txt');
   });
 });

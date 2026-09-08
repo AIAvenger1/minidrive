@@ -1,5 +1,5 @@
 import { readFile, utimes, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { basename, join } from 'path';
 import { computeSyncPlan, type ApiClient, type FileDto, type LocalFileInfo, type SyncReport } from '@minidrive/shared';
 import { LocalFolderScanner } from './localFolderScanner';
 
@@ -46,6 +46,9 @@ export class SyncEngine {
   }
 
   private async downloadTo(dir: string, file: FileDto): Promise<void> {
+    if (basename(file.name) !== file.name || file.name === '.' || file.name === '..') {
+      throw new Error('unsafe file name');
+    }
     const blob = await this.api.download(file.id);
     const target = join(dir, file.name);
     await writeFile(target, Buffer.from(await blob.arrayBuffer()));
