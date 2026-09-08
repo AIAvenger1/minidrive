@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import type { loadConfig as LoadConfig } from './config';
 
 const baseEnv = {
