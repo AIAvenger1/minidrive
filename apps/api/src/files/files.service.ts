@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { FileEntry } from '@prisma/client';
 import { extensionOf } from '@minidrive/shared';
 import { Readable } from 'stream';
+import { basename } from 'path';
 import { JwtUser } from '../auth/jwt.strategy';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -23,6 +24,9 @@ export class FilesService {
 
   async upsert(owner: JwtUser, file: Upload): Promise<FileDto> {
     const name = file.originalname;
+    if (basename(name) !== name || name === '.' || name === '..' || !name.trim()) {
+      throw new BadRequestException('Invalid file name');
+    }
     const found = await this.prisma.fileEntry.findUnique({
       where: { ownerId_name: { ownerId: owner.id, name } },
       include: withUsers,

@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { FilesService } from './files.service';
 
 const owner = { id: 'u1', username: 'bohdan' };
@@ -42,6 +42,22 @@ describe('FilesService.upsert', () => {
     expect(storage.putObject).toHaveBeenCalledWith('users/u1/f1', upload.buffer, 'text/plain');
     expect(prisma.fileEntry.update.mock.calls[0][0].data).toMatchObject({ size: 4, modifiedById: 'u2' });
     expect(prisma.fileEntry.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a name with path separators', async () => {
+    const badUpload = { originalname: '../evil.cs', buffer: Buffer.from('bad'), mimetype: 'text/plain', size: 3 };
+    await expect(service.upsert(owner, badUpload)).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.fileEntry.findUnique).not.toHaveBeenCalled();
+    expect(prisma.fileEntry.create).not.toHaveBeenCalled();
+    expect(storage.putObject).not.toHaveBeenCalled();
+  });
+
+  it('rejects an empty name', async () => {
+    const emptyUpload = { originalname: '  ', buffer: Buffer.from('bad'), mimetype: 'text/plain', size: 3 };
+    await expect(service.upsert(owner, emptyUpload)).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.fileEntry.findUnique).not.toHaveBeenCalled();
+    expect(prisma.fileEntry.create).not.toHaveBeenCalled();
+    expect(storage.putObject).not.toHaveBeenCalled();
   });
 
   it('refuses to read a file from another space', async () => {
