@@ -6,6 +6,7 @@ import {
   ColumnToggle,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -97,7 +98,7 @@ export function DriveScreen({ user, onLogout }: Props) {
           Оновити
         </Button>
         <Button type="button" variant="outline" onClick={downloadSelected} disabled={!vm.selected}>
-          Вивантажити
+          Скачати
         </Button>
         <Button type="button" variant="destructive" onClick={() => setConfirmDelete(true)} disabled={!vm.selected}>
           Видалити
@@ -124,6 +125,7 @@ export function DriveScreen({ user, onLogout }: Props) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Видалити файл?</DialogTitle>
+            <DialogDescription>Файл буде видалено без можливості відновлення.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setConfirmDelete(false)}>

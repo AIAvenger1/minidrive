@@ -1,6 +1,14 @@
 import { readFile, utimes, writeFile } from 'fs/promises';
-import { basename, join } from 'path';
-import { computeSyncPlan, type ApiClient, type FileDto, type LocalFileInfo, type SyncReport } from '@minidrive/shared';
+import { join } from 'path';
+import {
+  computeSyncPlan,
+  emptySyncReport,
+  isSyncableName,
+  type ApiClient,
+  type FileDto,
+  type LocalFileInfo,
+  type SyncReport,
+} from '@minidrive/shared';
 import { LocalFolderScanner } from './localFolderScanner';
 
 export type SyncApi = Pick<ApiClient, 'listFiles' | 'upload' | 'download'>;
@@ -17,13 +25,14 @@ export class SyncEngine {
     const [local, remote] = await Promise.all([this.scan(dir), this.api.listFiles()]);
     const plan = computeSyncPlan(local, remote);
     const remoteByName = new Map(remote.map((r) => [r.name, r]));
-    const report: SyncReport = { uploaded: 0, downloaded: 0, skipped: plan.skipped.length, failed: 0, errors: [] };
+    const report = emptySyncReport();
+    report.skipped = plan.skipped.length;
     const total = plan.uploads.length + plan.downloads.length;
     let done = 0;
 
     for (const action of plan.uploads) {
       try {
-        await this.api.upload(action.name, await readFile(join(dir, action.name)));
+        await this.uploadFrom(dir, action.name);
         report.uploaded += 1;
       } catch (err) {
         report.failed += 1;
@@ -34,7 +43,9 @@ export class SyncEngine {
 
     for (const action of plan.downloads) {
       try {
-        await this.downloadTo(dir, remoteByName.get(action.name)!);
+        const dto = remoteByName.get(action.name);
+        if (!dto) throw new Error('remote entry disappeared');
+        await this.downloadTo(dir, dto);
         report.downloaded += 1;
       } catch (err) {
         report.failed += 1;
@@ -45,10 +56,15 @@ export class SyncEngine {
     return report;
   }
 
+  private async uploadFrom(dir: string, name: string): Promise<void> {
+    if (!isSyncableName(name)) throw new Error('unsafe file name');
+    const dto = await this.api.upload(name, await readFile(join(dir, name)));
+    const t = new Date(dto.updatedAt);
+    await utimes(join(dir, name), t, t);
+  }
+
   private async downloadTo(dir: string, file: FileDto): Promise<void> {
-    if (basename(file.name) !== file.name || file.name === '.' || file.name === '..') {
-      throw new Error('unsafe file name');
-    }
+    if (!isSyncableName(file.name)) throw new Error('unsafe file name');
     const blob = await this.api.download(file.id);
     const target = join(dir, file.name);
     await writeFile(target, Buffer.from(await blob.arrayBuffer()));

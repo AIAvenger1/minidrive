@@ -20,7 +20,7 @@ export function SyncPanel({ onSynced }: { onSynced: () => void }) {
       .catch((err) => setError((err as Error).message));
     const offProgress = window.minidrive.sync.onProgress(setProgress);
     const offAuto = window.minidrive.sync.onAutoSync((r) => {
-      setReport(r as SyncReport);
+      setReport(r);
       onSynced();
     });
     return () => {
@@ -30,12 +30,26 @@ export function SyncPanel({ onSynced }: { onSynced: () => void }) {
   }, [onSynced]);
 
   async function pick() {
-    const chosen = await window.minidrive.folder.pick();
-    if (chosen) setFolder(chosen);
+    try {
+      const chosen = await window.minidrive.folder.pick();
+      if (chosen) setFolder(chosen);
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
   async function sync() {
-    if (!folder) return pick();
+    let dir = folder;
+    if (!dir) {
+      try {
+        dir = await window.minidrive.folder.pick();
+      } catch (err) {
+        setError((err as Error).message);
+        return;
+      }
+      if (!dir) return;
+      setFolder(dir);
+    }
     setBusy(true);
     setError(null);
     setProgress(null);
