@@ -71,6 +71,18 @@
     "typescript-eslint": "^8.20.0"
   },
   "jest": {
+    "preset": "ts-jest/presets/default-esm",
+    "extensionsToTreatAsEsm": [".ts"],
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@nestjs)/)"
+    ],
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
+    "transform": {
+      "^.+\\.ts$": ["ts-jest", { "useESM": true }],
+      "^.+\\.js$": ["ts-jest", { "useESM": true }]
+    },
     "moduleFileExtensions": [
       "js",
       "json",
@@ -78,9 +90,6 @@
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
