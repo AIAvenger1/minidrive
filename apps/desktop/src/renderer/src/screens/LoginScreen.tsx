@@ -1,30 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ApiError, type UserDto } from '@minidrive/shared';
 import { Alert, AlertDescription, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from '@minidrive/ui';
 import { CircleAlert } from 'lucide-react';
 import { configureApi } from '../api';
 import { SessionStore } from '../session';
 
-type Props = { onLoggedIn: (user: UserDto) => void };
+type Props = { apiUrl: string; onLoggedIn: (user: UserDto) => void };
 
-export function LoginScreen({ onLoggedIn }: Props) {
-  const [apiUrl, setApiUrl] = useState('http://localhost:3000');
+export function LoginScreen({ apiUrl: initialApiUrl, onLoggedIn }: Props) {
+  const [apiUrl, setApiUrl] = useState(initialApiUrl);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    SessionStore.load().then((s) => setApiUrl(s.apiUrl));
-  }, []);
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      const api = configureApi(apiUrl.trim().replace(/\/+$/, ''), null);
+      const api = configureApi(apiUrl, null);
       const res = mode === 'login' ? await api.login(username, password) : await api.register(username, password);
       await SessionStore.save(res.accessToken, api.baseUrl);
       onLoggedIn(res.user);

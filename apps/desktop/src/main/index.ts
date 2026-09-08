@@ -1,7 +1,8 @@
 import { app, BrowserWindow, shell } from 'electron';
+import { rmSync } from 'fs';
 import { join } from 'path';
 import { electronApp, is, optimizer } from '@electron-toolkit/utils';
-import { registerIpc } from './ipc';
+import { registerIpc, restoreAutoWatch } from './ipc';
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -13,7 +14,7 @@ function createWindow(): BrowserWindow {
   });
   win.on('ready-to-show', () => win.show());
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    if (url.startsWith('http://') || url.startsWith('https://')) shell.openExternal(url);
     return { action: 'deny' };
   });
   if (is.dev && process.env.ELECTRON_RENDERER_URL) {
@@ -27,8 +28,14 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('ua.knu.minidrive');
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window));
+  app.on('web-contents-created', (_, contents) => {
+    contents.on('will-navigate', (e, url) => {
+      if (url !== contents.getURL()) e.preventDefault();
+    });
+  });
   registerIpc();
   createWindow();
+  restoreAutoWatch();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -36,4 +43,8 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('before-quit', () => {
+  rmSync(join(app.getPath('temp'), 'minidrive'), { recursive: true, force: true });
 });

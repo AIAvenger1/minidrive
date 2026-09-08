@@ -17,7 +17,7 @@ export function getSettings(): Settings {
 }
 
 export function updateSettings(patch: Partial<Omit<Settings, 'token'>>): Settings {
-  if (patch.apiUrl !== undefined) store.set('apiUrl', patch.apiUrl.replace(/\/+$/, ''));
+  if (patch.apiUrl !== undefined) store.set('apiUrl', patch.apiUrl);
   if (patch.boundFolder !== undefined) store.set('boundFolder', patch.boundFolder);
   if (patch.autoWatch !== undefined) store.set('autoWatch', patch.autoWatch);
   return getSettings();
@@ -37,5 +37,10 @@ export function setToken(token: string | null): void {
 function decrypt(value: string | null): string | null {
   if (!value) return null;
   const buffer = Buffer.from(value, 'base64');
-  return safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(buffer) : buffer.toString('utf8');
+  try {
+    return safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(buffer) : buffer.toString('utf8');
+  } catch {
+    store.set('tokenEncrypted', null);
+    return null;
+  }
 }

@@ -4,7 +4,7 @@ export const SessionStore = {
   async load() {
     const settings = await window.minidrive.settings.get();
     configureApi(settings.apiUrl, settings.token);
-    return { token: settings.token as string | null, apiUrl: settings.apiUrl as string };
+    return { token: settings.token, apiUrl: settings.apiUrl };
   },
   async save(token: string, apiUrl: string) {
     await window.minidrive.settings.set({ apiUrl });

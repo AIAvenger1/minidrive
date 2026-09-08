@@ -1,37 +1,41 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { FileDto, SyncReport } from '@minidrive/shared';
+import { CHANNELS, type SettingsPatch, type StoredSettings, type SyncProgress, type SyncStatus } from '../shared/ipc';
 
 const minidrive = {
   settings: {
-    get: () => ipcRenderer.invoke('settings:get'),
-    set: (patch: Record<string, unknown>) => ipcRenderer.invoke('settings:set', patch),
+    get: (): Promise<StoredSettings> => ipcRenderer.invoke(CHANNELS.settingsGet),
+    set: (patch: SettingsPatch): Promise<StoredSettings> => ipcRenderer.invoke(CHANNELS.settingsSet, patch),
   },
   session: {
-    setToken: (token: string | null) => ipcRenderer.invoke('session:setToken', token),
-    getToken: () => ipcRenderer.invoke('session:getToken'),
+    setToken: (token: string | null): Promise<void> => ipcRenderer.invoke(CHANNELS.sessionSetToken, token),
+    getToken: (): Promise<string | null> => ipcRenderer.invoke(CHANNELS.sessionGetToken),
   },
-  folder: { pick: () => ipcRenderer.invoke('folder:pick') },
+  folder: {
+    pick: (): Promise<string | null> => ipcRenderer.invoke(CHANNELS.folderPick),
+  },
   sync: {
-    run: () => ipcRenderer.invoke('sync:run'),
-    watch: (enabled: boolean) => ipcRenderer.invoke('sync:watch', enabled),
-    status: () => ipcRenderer.invoke('sync:status'),
-    onProgress: (cb: (p: { done: number; total: number }) => void) => {
-      const listener = (_: unknown, p: { done: number; total: number }) => cb(p);
-      ipcRenderer.on('sync:progress', listener);
-      return () => ipcRenderer.removeListener('sync:progress', listener);
+    run: (): Promise<SyncReport> => ipcRenderer.invoke(CHANNELS.syncRun),
+    watch: (enabled: boolean): Promise<boolean> => ipcRenderer.invoke(CHANNELS.syncWatch, enabled),
+    status: (): Promise<SyncStatus> => ipcRenderer.invoke(CHANNELS.syncStatus),
+    onProgress: (cb: (p: SyncProgress) => void) => {
+      const listener = (_: unknown, p: SyncProgress) => cb(p);
+      ipcRenderer.on(CHANNELS.syncProgress, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.syncProgress, listener);
     },
-    onAutoSync: (cb: (report: unknown) => void) => {
-      const listener = (_: unknown, r: unknown) => cb(r);
-      ipcRenderer.on('sync:auto', listener);
-      return () => ipcRenderer.removeListener('sync:auto', listener);
+    onAutoSync: (cb: (report: SyncReport) => void) => {
+      const listener = (_: unknown, r: SyncReport) => cb(r);
+      ipcRenderer.on(CHANNELS.syncAuto, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.syncAuto, listener);
     },
   },
   file: {
-    saveAs: (name: string, bytes: ArrayBuffer) => ipcRenderer.invoke('file:saveAs', name, bytes),
-    dragOut: (file: unknown) => ipcRenderer.send('file:dragOut', file),
+    saveAs: (name: string, bytes: ArrayBuffer): Promise<string | null> => ipcRenderer.invoke(CHANNELS.fileSaveAs, name, bytes),
+    dragOut: (file: FileDto): void => ipcRenderer.send(CHANNELS.fileDragOut, file),
     onDragOutError: (cb: (message: string) => void) => {
       const listener = (_: unknown, message: string) => cb(message);
-      ipcRenderer.on('file:dragOutError', listener);
-      return () => ipcRenderer.removeListener('file:dragOutError', listener);
+      ipcRenderer.on(CHANNELS.fileDragOutError, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.fileDragOutError, listener);
     },
   },
 };

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ApiError, type UserDto } from '@minidrive/shared';
 import { getApi } from './api';
 import { LoginScreen } from './screens/LoginScreen';
@@ -7,11 +7,13 @@ import { SessionStore } from './session';
 
 export default function App() {
   const [user, setUser] = useState<UserDto | null>(null);
+  const [apiUrl, setApiUrl] = useState('http://localhost:3000');
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     SessionStore.load()
       .then(async (s) => {
+        setApiUrl(s.apiUrl);
         if (s.token) setUser(await getApi().me());
       })
       .catch((err) => {
@@ -20,15 +22,12 @@ export default function App() {
       .finally(() => setReady(true));
   }, []);
 
+  const onLogout = useCallback(async () => {
+    await SessionStore.clear();
+    setUser(null);
+  }, []);
+
   if (!ready) return null;
-  if (!user) return <LoginScreen onLoggedIn={setUser} />;
-  return (
-    <DriveScreen
-      user={user}
-      onLogout={async () => {
-        await SessionStore.clear();
-        setUser(null);
-      }}
-    />
-  );
+  if (!user) return <LoginScreen apiUrl={apiUrl} onLoggedIn={setUser} />;
+  return <DriveScreen user={user} onLogout={onLogout} />;
 }
