@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createPreview, ImagePreview, previewKindOf, TextPreview } from './preview';
+import { makeFileDto } from './testFixtures';
 import type { FileDto } from './types';
 
-const entry = (name: string): FileDto => ({
-  id: 'x', name, extension: '', size: 1, createdAt: '', updatedAt: '', uploadedBy: 'a', modifiedBy: 'a',
-});
+const entry = (name: string): FileDto => makeFileDto({ id: 'x', name });
 
 describe('previewKindOf', () => {
   it('maps the variant types', () => {
@@ -43,5 +42,13 @@ describe('createPreview', () => {
 
   it('returns null when nothing can render the file', () => {
     expect(createPreview(entry('data.bin'))).toBeNull();
+  });
+});
+
+describe('FilePreview.canRender', () => {
+  it('matches only the preview kind of its own extension', () => {
+    const text = createPreview(entry('notes.md')) as TextPreview;
+    expect(text.canRender('cs')).toBe(true);
+    expect(text.canRender('jpg')).toBe(false);
   });
 });

@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useReducer, useState } from 'react';
+import { useCallback, useReducer, useRef, useState } from 'react';
 import { ApiClient, ApiError, DriveViewModel } from '@minidrive/shared';
 
 export function useDrive(api: ApiClient, onUnauthorized: () => void) {
-  const vm = useMemo(() => new DriveViewModel(), []);
+  const vmRef = useRef<DriveViewModel>(null);
+  vmRef.current ??= new DriveViewModel();
+  const vm = vmRef.current;
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -13,8 +15,12 @@ export function useDrive(api: ApiClient, onUnauthorized: () => void) {
       vm.setFiles(await api.listFiles());
       setError(null);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) onUnauthorized();
-      else setError(err instanceof Error ? err.message : String(err));
+      if (err instanceof ApiError && err.status === 401) {
+        setError(null);
+        onUnauthorized();
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
     } finally {
       setBusy(false);
       rerender();

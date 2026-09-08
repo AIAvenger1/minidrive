@@ -20,7 +20,3 @@ export function toggleColumn(visibility: ColumnVisibility, key: ColumnKey): Colu
   if (key === 'name') return { ...visibility, name: true };
   return { ...visibility, [key]: !visibility[key] };
 }
-
-export function hideAllButName(): ColumnVisibility {
-  return { ...DEFAULT_COLUMNS, extension: false, size: false, createdAt: false, updatedAt: false, uploadedBy: false, modifiedBy: false };
-}

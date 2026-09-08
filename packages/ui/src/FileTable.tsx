@@ -1,4 +1,5 @@
 import { COLUMN_KEYS, COLUMN_LABELS, type ColumnVisibility, type FileDto } from '@minidrive/shared';
+import { formatDateTime } from './lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table';
 
 type Props = {
@@ -9,7 +10,6 @@ type Props = {
   onDragStart?: (file: FileDto, e: React.DragEvent) => void;
 };
 
-const fmtDate = (iso: string) => new Date(iso).toLocaleString('uk-UA');
 const fmtSize = (n: number) => (n < 1024 ? `${n} Б` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} КБ` : `${(n / 1024 / 1024).toFixed(1)} МБ`);
 
 export function FileTable({ files, columns, selected, onSelect, onDragStart }: Props) {
@@ -35,7 +35,7 @@ export function FileTable({ files, columns, selected, onSelect, onDragStart }: P
           >
             {visible.map((k) => (
               <TableCell key={k}>
-                {k === 'size' ? fmtSize(f.size) : k === 'createdAt' || k === 'updatedAt' ? fmtDate(f[k]) : f[k]}
+                {k === 'size' ? fmtSize(f.size) : k === 'createdAt' || k === 'updatedAt' ? formatDateTime(f[k]) : f[k]}
               </TableCell>
             ))}
           </TableRow>

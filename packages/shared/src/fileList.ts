@@ -16,6 +16,14 @@ export function sortByName(files: FileDto[], order: SortOrder): FileDto[] {
 }
 
 export function filterByType(files: FileDto[], filter: FileFilter): FileDto[] {
-  if (filter === 'all') return files;
+  if (filter === 'all') return [...files];
   return files.filter((f) => VARIANT_FILTER_EXTENSIONS.has(extensionOf(f.name)));
+}
+
+export function isSafeFileName(name: string): boolean {
+  return name.trim().length > 0 && name !== '.' && name !== '..' && !name.includes('/') && !name.includes('\\');
+}
+
+export function isSyncableName(name: string): boolean {
+  return isSafeFileName(name) && !name.startsWith('.');
 }

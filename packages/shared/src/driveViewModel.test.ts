@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { FileDto } from './types';
 import { DriveViewModel } from './driveViewModel';
+import { makeFileDto } from './testFixtures';
 
-const f = (name: string): FileDto => ({
-  id: name, name, extension: '', size: 1, createdAt: '', updatedAt: '', uploadedBy: 'b', modifiedBy: 'b',
-});
+const f = (name: string): FileDto => makeFileDto({ id: name, name });
 
 describe('DriveViewModel', () => {
   it('applies sort by name and the cpp/png filter to visibleFiles', () => {

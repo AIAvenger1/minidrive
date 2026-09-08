@@ -13,6 +13,4 @@ tools/plantuml.jar
 __pycache__/
 .yarn/
 *.tsbuildinfo
-docs/reports/*.docx
-docs/reports/*.pdf
 .worktrees/

@@ -9,11 +9,10 @@ export class ApiError extends Error {
 export class ApiClient {
   private token: string | null;
 
-  constructor(readonly baseUrl: string, token: string | null = null) {
-    this.token = token;
-  }
+  readonly baseUrl: string;
 
-  setToken(token: string | null): void {
+  constructor(baseUrl: string, token: string | null = null) {
+    this.baseUrl = baseUrl.trim().replace(/\/+$/, '');
     this.token = token;
   }
 

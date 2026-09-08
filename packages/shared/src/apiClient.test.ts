@@ -33,4 +33,58 @@ describe('ApiClient', () => {
     expect(body.get('file')).toBeInstanceOf(Blob);
     expect((body.get('file') as File).name).toBe('b.cs');
   });
+
+  it('trims a trailing slash off the base url', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, []));
+    vi.stubGlobal('fetch', fetchMock);
+    const api = new ApiClient(' http://api.test/// ', 'tok');
+    expect(api.baseUrl).toBe('http://api.test');
+    await api.listFiles();
+    expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/files');
+  });
+
+  it('downloads content as a blob', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(['data']), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const api = new ApiClient('http://api.test', 'tok');
+    const blob = await api.download('42');
+    expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/files/42/content');
+    expect(await blob.text()).toBe('data');
+  });
+
+  it('removes a file', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const api = new ApiClient('http://api.test', 'tok');
+    await api.remove('42');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://api.test/files/42');
+    expect(init.method).toBe('DELETE');
+  });
+
+  it('registers with username and password', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(201, { accessToken: 't', user: { id: '1', username: 'bohdan' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const api = new ApiClient('http://api.test');
+    const result = await api.register('bohdan', 'secret');
+    expect(result.accessToken).toBe('t');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://api.test/auth/register');
+    expect(JSON.parse(init.body as string)).toEqual({ username: 'bohdan', password: 'secret' });
+  });
+
+  it('resolves to undefined on a 204 response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+    const api = new ApiClient('http://api.test', 'tok');
+    await expect(api.remove('1')).resolves.toBeUndefined();
+  });
+
+  it('joins an array message from the error body', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(400, { message: ['name is required', 'name is too long'] })));
+    const api = new ApiClient('http://api.test');
+    await expect(api.me()).rejects.toMatchObject({
+      status: 400,
+      message: 'name is required; name is too long',
+    } satisfies Partial<ApiError>);
+  });
 });

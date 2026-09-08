@@ -1,4 +1,4 @@
-import type { FileDto, LocalFileInfo, SyncAction, SyncPlan } from './types';
+import type { FileDto, LocalFileInfo, SyncAction, SyncPlan, SyncReport } from './types';
 
 export const SKEW_MS = 2000;
 
@@ -14,6 +14,10 @@ export function computeSyncPlan(local: LocalFileInfo[], remote: FileDto[]): Sync
       continue;
     }
     const remoteTime = Date.parse(r.updatedAt);
+    if (Number.isNaN(remoteTime)) {
+      plan.downloads.push(action('download', l.name, 'invalid remote timestamp'));
+      continue;
+    }
     const sameSize = l.size === r.size;
     const closeInTime = Math.abs(l.mtime - remoteTime) <= SKEW_MS;
     if (sameSize && closeInTime) {
@@ -35,4 +39,12 @@ export function computeSyncPlan(local: LocalFileInfo[], remote: FileDto[]): Sync
 
 function action(kind: SyncAction['kind'], name: string, reason: string): SyncAction {
   return { kind, name, reason };
+}
+
+export function emptySyncReport(): SyncReport {
+  return { uploaded: 0, downloaded: 0, skipped: 0, failed: 0, errors: [] };
+}
+
+export function failedSyncReport(message: string): SyncReport {
+  return { uploaded: 0, downloaded: 0, skipped: 0, failed: 1, errors: [message] };
 }

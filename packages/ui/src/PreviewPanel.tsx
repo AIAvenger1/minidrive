@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react';
-import { createPreview, type FileDto, type PreviewResult } from '@minidrive/shared';
+import { createPreview, extensionOf, type FileDto, type PreviewResult } from '@minidrive/shared';
 import { CircleAlert } from 'lucide-react';
 import { Alert, AlertDescription } from './components/ui/alert';
 import { Badge } from './components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
+import { formatDateTime } from './lib/utils';
 
 type Props = { file: FileDto | null; loadContent: (file: FileDto) => Promise<Blob> };
-
-function extensionOf(name: string) {
-  const i = name.lastIndexOf('.');
-  return i === -1 ? '' : name.slice(i + 1).toLowerCase();
-}
 
 export function PreviewPanel({ file, loadContent }: Props) {
   const [result, setResult] = useState<PreviewResult | null>(null);
@@ -71,9 +67,9 @@ export function PreviewPanel({ file, loadContent }: Props) {
       <CardContent>
         <dl className="mb-4 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-sm">
           <dt className="text-muted-foreground">Створено</dt>
-          <dd>{new Date(file.createdAt).toLocaleString('uk-UA')}</dd>
+          <dd>{formatDateTime(file.createdAt)}</dd>
           <dt className="text-muted-foreground">Змінено</dt>
-          <dd>{new Date(file.updatedAt).toLocaleString('uk-UA')}</dd>
+          <dd>{formatDateTime(file.updatedAt)}</dd>
           <dt className="text-muted-foreground">Завантажив</dt>
           <dd>{file.uploadedBy}</dd>
           <dt className="text-muted-foreground">Редагував</dt>
