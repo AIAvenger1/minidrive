@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type DragEvent, type ReactNode } from 'react';
-import type { ApiClient, FileDto, UserDto } from '@minidrive/shared';
+import { MAX_UPLOAD_MB, splitBySize, type ApiClient, type FileDto, type UserDto } from '@minidrive/shared';
 import { ColumnToggle } from './ColumnToggle';
 import { FileTable } from './FileTable';
 import { FilterControl } from './FilterControl';
@@ -53,9 +53,13 @@ export function DriveWorkspace({ user, api, onLogout, saveFile, onRowDragStart, 
   }
 
   function uploadFiles(files: File[]) {
+    const { accepted, rejected } = splitBySize(files);
     return run(async () => {
-      for (const f of files) await api.upload(f.name, f, f.type || 'application/octet-stream');
-      await refresh();
+      for (const f of accepted) await api.upload(f.name, f, f.type || 'application/octet-stream');
+      if (accepted.length > 0) await refresh();
+      if (rejected.length > 0) {
+        throw new Error(`Завеликі файли (понад ${MAX_UPLOAD_MB} МБ): ${rejected.map((f) => f.name).join(', ')}`);
+      }
     });
   }
 
