@@ -1,30 +1,30 @@
 Test Suites: 7 passed, 7 total
 Tests:       23 passed, 23 total
 Snapshots:   0 total
-Time:        0.794 s, estimated 1 s
+Time:        0.758 s, estimated 1 s
 Ran all test suites.
 
  Test Files  1 passed (1)
       Tests  7 passed (7)
-   Start at  01:26:44
-   Duration  107ms (transform 69%, import 15%, tests 13%, worker 2%)
+   Start at  02:29:21
+   Duration  103ms (transform 69%, import 15%, tests 13%, worker 3%)
 
  Test Files  1 passed (1)
       Tests  4 passed (4)
-   Start at  01:26:45
-   Duration  96ms (transform 73%, import 17%, tests 7%, worker 3%)
+   Start at  02:29:22
+   Duration  103ms (transform 73%, import 17%, tests 7%, worker 3%)
 
- ✓ src/columns.test.ts (2 tests) 1ms
  ✓ src/syncLedger.test.ts (6 tests) 2ms
+ ✓ src/columns.test.ts (2 tests) 1ms
  ✓ src/preview.test.ts (7 tests) 2ms
- ✓ src/sync.test.ts (9 tests) 3ms
+ ✓ src/apiClient.test.ts (9 tests) 6ms
+ ✓ src/sync.test.ts (13 tests) 5ms
  ✓ src/driveViewModel.test.ts (2 tests) 7ms
- ✓ src/apiClient.test.ts (9 tests) 7ms
- ✓ src/fileList.test.ts (12 tests) 9ms
+ ✓ src/fileList.test.ts (12 tests) 8ms
 
  Test Files  7 passed (7)
-      Tests  47 passed (47)
-   Start at  01:26:46
-   Duration  228ms (transform 140ms, setup 0ms, collect 233ms, tests 31ms, environment 1ms, prepare 377ms)
+      Tests  51 passed (51)
+   Start at  02:29:22
+   Duration  216ms (transform 135ms, setup 0ms, collect 240ms, tests 31ms, environment 1ms, prepare 369ms)
 
-Done in 3s 759ms
+Done in 3s 618ms
