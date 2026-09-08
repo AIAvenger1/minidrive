@@ -1,4 +1,4 @@
-import { configureApi } from './api';
+import { configureApi } from '@minidrive/ui';
 
 export const SessionStore = {
   async load() {

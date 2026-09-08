@@ -1,4 +1,3 @@
-import './styles.css'
 import '@minidrive/ui/src/styles.css'
 
 import { StrictMode } from 'react'

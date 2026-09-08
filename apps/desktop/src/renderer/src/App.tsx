@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError, type UserDto } from '@minidrive/shared';
-import { getApi } from './api';
+import { getApi } from '@minidrive/ui';
 import { LoginScreen } from './screens/LoginScreen';
 import { DriveScreen } from './screens/DriveScreen';
 import { SessionStore } from './session';

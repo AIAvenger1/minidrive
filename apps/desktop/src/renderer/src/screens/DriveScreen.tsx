@@ -12,13 +12,13 @@ import {
   DialogTitle,
   FileTable,
   FilterControl,
+  getApi,
   PreviewPanel,
   SortControl,
   UploadDropzone,
   useDrive
 } from '@minidrive/ui';
 import { SyncPanel } from '../components/SyncPanel';
-import { getApi } from '../api';
 
 type Props = { user: UserDto; onLogout: () => void };
 
