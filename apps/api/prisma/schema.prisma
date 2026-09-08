@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String      @id @default(uuid())
+  username     String      @unique
+  passwordHash String
+  createdAt    DateTime    @default(now())
+  ownedFiles   FileEntry[] @relation("owner")
+  uploaded     FileEntry[] @relation("uploadedBy")
+  modified     FileEntry[] @relation("modifiedBy")
+}
+
+model FileEntry {
+  id           String   @id @default(uuid())
+  ownerId      String
+  name         String
+  extension    String
+  size         Int
+  storageKey   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
+  uploadedById String
+  modifiedById String
+  owner        User     @relation("owner", fields: [ownerId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation("uploadedBy", fields: [uploadedById], references: [id])
+  modifiedBy   User     @relation("modifiedBy", fields: [modifiedById], references: [id])
+
+  @@unique([ownerId, name])
+}
