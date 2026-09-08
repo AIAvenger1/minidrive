@@ -12,12 +12,14 @@ async function bootstrap() {
     origin: config.corsOrigins.includes('*') ? true : config.corsOrigins,
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  const doc = new DocumentBuilder()
-    .setTitle('MiniDrive API')
-    .setVersion('0.1')
-    .addBearerAuth()
-    .build();
-  SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, doc));
+  if (config.swaggerEnabled) {
+    const doc = new DocumentBuilder()
+      .setTitle('MiniDrive API')
+      .setVersion('0.1')
+      .addBearerAuth()
+      .build();
+    SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, doc));
+  }
   await app.listen(config.port);
 }
 

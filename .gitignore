@@ -5,6 +5,7 @@ out/
 .env
 .env.*
 !.env.example
+!.env.prod.example
 *.log
 .DS_Store
 coverage/
