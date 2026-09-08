@@ -1,5 +1,6 @@
 export * from './apiRegistry';
 export * from './LoginForm';
+export * from './DriveWorkspace';
 export * from './useDrive';
 export * from './FileTable';
 export * from './SortControl';
