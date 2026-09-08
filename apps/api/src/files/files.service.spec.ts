@@ -60,6 +60,14 @@ describe('FilesService.upsert', () => {
     expect(storage.putObject).not.toHaveBeenCalled();
   });
 
+  it('rejects a name with a backslash', async () => {
+    const backslashUpload = { originalname: 'a\\b.cs', buffer: Buffer.from('bad'), mimetype: 'text/plain', size: 3 };
+    await expect(service.upsert(owner, backslashUpload)).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.fileEntry.findUnique).not.toHaveBeenCalled();
+    expect(prisma.fileEntry.create).not.toHaveBeenCalled();
+    expect(storage.putObject).not.toHaveBeenCalled();
+  });
+
   it('refuses to read a file from another space', async () => {
     prisma.fileEntry.findUnique.mockResolvedValue({ ...existing, ownerId: 'someone-else' });
     await expect(service.getContent('u1', 'f1')).rejects.toBeInstanceOf(NotFoundException);

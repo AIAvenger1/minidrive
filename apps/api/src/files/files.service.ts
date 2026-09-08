@@ -24,7 +24,7 @@ export class FilesService {
 
   async upsert(owner: JwtUser, file: Upload): Promise<FileDto> {
     const name = file.originalname;
-    if (basename(name) !== name || name === '.' || name === '..' || !name.trim()) {
+    if (basename(name) !== name || name === '.' || name === '..' || !name.trim() || name.includes('/') || name.includes('\\')) {
       throw new BadRequestException('Invalid file name');
     }
     const found = await this.prisma.fileEntry.findUnique({
