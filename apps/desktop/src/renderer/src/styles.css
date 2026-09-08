@@ -23,7 +23,3 @@
   min-height: 0;
   overflow: auto;
 }
-
-.sync {
-  grid-column: 1 / -1;
-}

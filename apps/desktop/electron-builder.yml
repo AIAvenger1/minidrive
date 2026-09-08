@@ -33,5 +33,5 @@ linux:
   maintainer: Bohdan Petrov
   category: Utility
 appImage:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${version}-${arch}.${ext}
 npmRebuild: false
