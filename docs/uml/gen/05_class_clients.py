@@ -47,6 +47,12 @@ sync_plan = d.klass("SyncPlan",
                     stereotype="type", color=SYNC, group=shared, min_w=150)
 local_file_info = d.klass("LocalFileInfo", attrs=["name: string", "size: number", "mtime: Date"],
                           stereotype="type", color=SYNC, group=shared, min_w=150)
+sync_ledger = d.klass("SyncLedger",
+                      attrs=["- entries: Map<name, {size, mtime, updatedAt}>"],
+                      methods=["+ reconcileWithLedger(local, ledger)",
+                               "+ recordTransfer(ledger, name, entry)",
+                               "+ pruneLedger(ledger, present)"],
+                      color=SYNC, group=shared, min_w=210)
 file_dto = d.klass("FileDto",
                    attrs=["id", "name", "extension", "size", "createdAt", "updatedAt",
                           "uploadedBy", "modifiedBy"],
@@ -90,8 +96,9 @@ def component(name: str, color: str, group: str) -> str:
 # column 0 (bottom-to-top): BrowserSyncEngine, DrivePage, LoginPage
 browser_sync = d.klass("BrowserSyncEngine",
                        attrs=["- dirHandle: FileSystemDirectoryHandle"],
-                       methods=["+ pickFolder()", "+ synchronize(): SyncReport"],
-                       color=SYNC, group=web)
+                       methods=["+ pickFolder()", "+ scan(dir): LocalFileInfo[]",
+                                "+ synchronize(dir): SyncReport"],
+                       color=SYNC, group=web, min_w=220)
 drive_page = d.klass("DrivePage", stereotype="page", color=LIST, group=web, min_w=140)
 login_page = d.klass("LoginPage", stereotype="page", color=ACCESS, group=web, min_w=140)
 # column 1 (bottom-to-top): ApiClient, SyncPanel ... FileTable
@@ -106,13 +113,18 @@ w_filter_control = component("FilterControl", LIST, web)
 w_sort_control = component("SortControl", LIST, web)
 w_column_toggle = component("ColumnToggle", LIST, web)
 w_file_table = component("FileTable", LIST, web)
+drive_workspace = component("DriveWorkspace", LIST, web)
+login_form = component("LoginForm", LIST, web)
 session_store = d.klass("SessionStore", attrs=["- token (localStorage)"],
-                        methods=["+ get()", "+ set()", "+ clear()"], color=ACCESS, group=web)
-web_note = d.note("File System Access API (Chrome/Edge);\nno automatic watching", group=web)
+                        methods=["+ load()", "+ save(token)", "+ clear()"], color=ACCESS, group=web)
+web_note = d.note("File System Access API (Chrome/Edge);\nno automatic watching;\n"
+                  "mtime kept in a localStorage ledger", group=web)
+ui_note = d.note("shared via packages/ui", group=web)
 
 e_drive_utils = dep(drive_page, file_list_utils, "«use» sortByName, filterByType,\ntoggleColumn, previewKindOf", back=True)
 e_drive_factory = dep(drive_page, preview_factory, "«use» createPreview", back=True)
 e_bsync_utils = dep(browser_sync, file_list_utils, "«use» computeSyncPlan", back=True)
+e_bsync_ledger = dep(browser_sync, sync_ledger, USE, back=True)
 for c in (w_sync_panel, w_upload_dropzone, w_preview_panel, w_filter_control, w_sort_control,
           w_column_toggle, w_file_table):
     comp(drive_page, c)
@@ -122,6 +134,8 @@ e_bsync_api = dep(browser_sync, api_client, USE)
 e_api_session = dep(api_client, session_store, USE)
 e_syncpanel_bsync = dep(w_sync_panel, browser_sync, USE, back=True, port=ports(0, 0.8, 1, 0.8))
 d.note_link(web_note, browser_sync)
+d.note_link(ui_note, drive_workspace)
+d.note_link(ui_note, login_form)
 
 # =============================================================================
 # apps/desktop (Electron)
