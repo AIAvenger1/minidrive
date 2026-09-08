@@ -13,9 +13,6 @@ export default defineConfig({
         '@': resolve('../../packages/ui/src')
       }
     },
-    optimizeDeps: {
-      include: ['@minidrive/shared']
-    },
     plugins: [react(), tailwindcss()]
   }
 })
