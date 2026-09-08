@@ -3,6 +3,7 @@
 import { DriveWorkspace, getApi } from '@minidrive/ui';
 import { useSession } from '../../hooks/useSession';
 import { saveBlob } from '../../lib/download';
+import { SyncPanel } from '../../components/SyncPanel';
 
 export default function DrivePage() {
   const { user, ready, logout } = useSession();
@@ -14,6 +15,7 @@ export default function DrivePage() {
       api={getApi()}
       onLogout={logout}
       saveFile={(file, blob) => saveBlob(file.name, blob)}
+      renderSyncPanel={(onSynced) => <SyncPanel onSynced={onSynced} />}
     />
   );
 }
