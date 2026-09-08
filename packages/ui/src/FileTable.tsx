@@ -1,4 +1,5 @@
 import { COLUMN_KEYS, COLUMN_LABELS, type ColumnVisibility, type FileDto } from '@minidrive/shared';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table';
 
 type Props = {
   files: FileDto[];
@@ -14,28 +15,39 @@ const fmtSize = (n: number) => (n < 1024 ? `${n} Б` : n < 1024 * 1024 ? `${(n /
 export function FileTable({ files, columns, selected, onSelect, onDragStart }: Props) {
   const visible = COLUMN_KEYS.filter((k) => columns[k]);
   return (
-    <table className="files">
-      <thead>
-        <tr>{visible.map((k) => <th key={k}>{COLUMN_LABELS[k]}</th>)}</tr>
-      </thead>
-      <tbody>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {visible.map((k) => (
+            <TableHead key={k}>{COLUMN_LABELS[k]}</TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {files.map((f) => (
-          <tr
+          <TableRow
             key={f.id}
-            className={selected?.id === f.id ? 'selected' : ''}
+            data-state={selected?.id === f.id ? 'selected' : undefined}
+            className="cursor-pointer"
             onClick={() => onSelect(f)}
             draggable={Boolean(onDragStart)}
             onDragStart={(e) => onDragStart?.(f, e)}
           >
             {visible.map((k) => (
-              <td key={k}>
+              <TableCell key={k}>
                 {k === 'size' ? fmtSize(f.size) : k === 'createdAt' || k === 'updatedAt' ? fmtDate(f[k]) : f[k]}
-              </td>
+              </TableCell>
             ))}
-          </tr>
+          </TableRow>
         ))}
-        {files.length === 0 && <tr><td colSpan={visible.length} className="empty">Файлів немає</td></tr>}
-      </tbody>
-    </table>
+        {files.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={visible.length} className="py-8 text-center text-muted-foreground">
+              Файлів немає
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
   );
 }

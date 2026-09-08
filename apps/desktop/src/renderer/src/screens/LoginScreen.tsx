@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError, type UserDto } from '@minidrive/shared';
+import { Alert, AlertDescription, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from '@minidrive/ui';
+import { CircleAlert } from 'lucide-react';
 import { configureApi } from '../api';
 import { SessionStore } from '../session';
 
@@ -33,30 +35,66 @@ export function LoginScreen({ onLoggedIn }: Props) {
     }
   }
 
+  function switchMode() {
+    setMode(mode === 'login' ? 'register' : 'login');
+    setError(null);
+  }
+
   return (
     <div className="login">
-      <form className="login-card" onSubmit={submit}>
-        <h1>MiniDrive</h1>
-        <label>
-          Адреса сервера
-          <input value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} placeholder="http://localhost:3000" />
-        </label>
-        <label>
-          Ім'я користувача
-          <input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
-        </label>
-        <label>
-          Пароль
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </label>
-        {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={busy}>
-          {mode === 'login' ? 'Увійти' : 'Зареєструватися'}
-        </button>
-        <button type="button" className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
-          {mode === 'login' ? 'Немає облікового запису? Зареєструватися' : 'Уже є обліковий запис? Увійти'}
-        </button>
-      </form>
+      <Card className="w-[360px]">
+        <CardHeader>
+          <CardTitle className="text-xl">MiniDrive</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="grid gap-4" onSubmit={submit}>
+            <div className="grid gap-1.5">
+              <Label htmlFor="apiUrl">Адреса сервера</Label>
+              <Input
+                id="apiUrl"
+                value={apiUrl}
+                onChange={(e) => setApiUrl(e.target.value)}
+                placeholder="http://localhost:3000"
+                required
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="username">Ім'я користувача</Label>
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                autoFocus
+                required
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="password">Пароль</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            {error && (
+              <Alert variant="destructive" aria-live="polite">
+                <CircleAlert />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <Button type="submit" disabled={busy}>
+              {mode === 'login' ? 'Увійти' : 'Зареєструватися'}
+            </Button>
+            <Button type="button" variant="link" onClick={switchMode}>
+              {mode === 'login' ? 'Немає облікового запису? Зареєструватися' : 'Уже є обліковий запис? Увійти'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

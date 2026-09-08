@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react';
 import { createPreview, type FileDto, type PreviewResult } from '@minidrive/shared';
+import { CircleAlert } from 'lucide-react';
+import { Alert, AlertDescription } from './components/ui/alert';
+import { Badge } from './components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 
 type Props = { file: FileDto | null; loadContent: (file: FileDto) => Promise<Blob> };
+
+function extensionOf(name: string) {
+  const i = name.lastIndexOf('.');
+  return i === -1 ? '' : name.slice(i + 1).toLowerCase();
+}
 
 export function PreviewPanel({ file, loadContent }: Props) {
   const [result, setResult] = useState<PreviewResult | null>(null);
@@ -41,21 +50,50 @@ export function PreviewPanel({ file, loadContent }: Props) {
     };
   }, [file, loadContent]);
 
-  if (!file) return <aside className="preview empty">Оберіть файл, щоб побачити вміст</aside>;
+  if (!file) {
+    return (
+      <Card className="h-full">
+        <CardContent className="flex h-full items-center justify-center text-muted-foreground">
+          Оберіть файл, щоб побачити вміст
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const ext = extensionOf(file.name);
+
   return (
-    <aside className="preview">
-      <h3>{file.name}</h3>
-      <dl>
-        <dt>Створено</dt><dd>{new Date(file.createdAt).toLocaleString('uk-UA')}</dd>
-        <dt>Змінено</dt><dd>{new Date(file.updatedAt).toLocaleString('uk-UA')}</dd>
-        <dt>Завантажив</dt><dd>{file.uploadedBy}</dd>
-        <dt>Редагував</dt><dd>{file.modifiedBy}</dd>
-      </dl>
-      {state === 'loading' && <p>Завантаження…</p>}
-      {state === 'unsupported' && <p>Попередній перегляд для цього типу недоступний</p>}
-      {state === 'error' && <p className="error">Не вдалося отримати вміст</p>}
-      {result?.kind === 'text' && <pre>{result.text}</pre>}
-      {result?.kind === 'image' && <img src={result.url} alt={file.name} />}
-    </aside>
+    <Card className="h-full overflow-auto">
+      <CardHeader className="flex-row items-center gap-2 space-y-0">
+        <CardTitle className="min-w-0 truncate">{file.name}</CardTitle>
+        {ext && <Badge variant="secondary">.{ext}</Badge>}
+      </CardHeader>
+      <CardContent>
+        <dl className="mb-4 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-sm">
+          <dt className="text-muted-foreground">Створено</dt>
+          <dd>{new Date(file.createdAt).toLocaleString('uk-UA')}</dd>
+          <dt className="text-muted-foreground">Змінено</dt>
+          <dd>{new Date(file.updatedAt).toLocaleString('uk-UA')}</dd>
+          <dt className="text-muted-foreground">Завантажив</dt>
+          <dd>{file.uploadedBy}</dd>
+          <dt className="text-muted-foreground">Редагував</dt>
+          <dd>{file.modifiedBy}</dd>
+        </dl>
+        {state === 'loading' && <p>Завантаження…</p>}
+        {state === 'unsupported' && (
+          <p className="text-muted-foreground">Попередній перегляд для цього типу недоступний</p>
+        )}
+        {state === 'error' && (
+          <Alert variant="destructive">
+            <CircleAlert />
+            <AlertDescription>Не вдалося отримати вміст</AlertDescription>
+          </Alert>
+        )}
+        {result?.kind === 'text' && (
+          <pre className="whitespace-pre-wrap break-words font-mono text-xs">{result.text}</pre>
+        )}
+        {result?.kind === 'image' && <img className="h-auto max-w-full rounded" src={result.url} alt={file.name} />}
+      </CardContent>
+    </Card>
   );
 }

@@ -1,4 +1,7 @@
 import { useRef, useState, type PropsWithChildren } from 'react';
+import { Upload } from 'lucide-react';
+import { Button } from './components/ui/button';
+import { cn } from './lib/utils';
 
 type Props = PropsWithChildren<{ onFiles: (files: File[]) => void; busy: boolean }>;
 
@@ -8,7 +11,10 @@ export function UploadDropzone({ onFiles, busy, children }: Props) {
 
   return (
     <div
-      className={`dropzone${over ? ' over' : ''}`}
+      className={cn(
+        'relative min-h-[200px] overflow-auto rounded-lg border bg-background',
+        over && 'border-2 border-dashed border-primary bg-primary/5'
+      )}
       onDragOver={(e) => {
         e.preventDefault();
         setOver(true);
@@ -30,7 +36,10 @@ export function UploadDropzone({ onFiles, busy, children }: Props) {
           e.target.value = '';
         }}
       />
-      <button type="button" onClick={() => input.current?.click()} disabled={busy}>Завантажити файли</button>
+      <Button type="button" className="m-2" onClick={() => input.current?.click()} disabled={busy}>
+        <Upload />
+        Завантажити файли
+      </Button>
       {children}
       {over && <div className="drop-hint">Відпустіть, щоб завантажити</div>}
     </div>

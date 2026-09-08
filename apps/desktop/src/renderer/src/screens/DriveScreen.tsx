@@ -1,6 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FileDto, UserDto } from '@minidrive/shared';
-import { ColumnToggle, FileTable, FilterControl, PreviewPanel, SortControl, UploadDropzone, useDrive } from '@minidrive/ui';
+import {
+  Badge,
+  Button,
+  ColumnToggle,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  FileTable,
+  FilterControl,
+  PreviewPanel,
+  SortControl,
+  UploadDropzone,
+  useDrive
+} from '@minidrive/ui';
 import { SyncPanel } from '../components/SyncPanel';
 import { getApi } from '../api';
 
@@ -9,6 +24,7 @@ type Props = { user: UserDto; onLogout: () => void };
 export function DriveScreen({ user, onLogout }: Props) {
   const { vm, refresh, update, busy, error, setError } = useDrive(getApi(), onLogout);
   const [working, setWorking] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     refresh();
@@ -49,7 +65,8 @@ export function DriveScreen({ user, onLogout }: Props) {
   }
 
   async function deleteSelected() {
-    if (!vm.selected || !confirm(`Видалити «${vm.selected.name}»?`)) return;
+    if (!vm.selected) return;
+    setConfirmDelete(false);
     setWorking(true);
     try {
       await getApi().remove(vm.selected.id);
@@ -63,20 +80,30 @@ export function DriveScreen({ user, onLogout }: Props) {
 
   return (
     <div className="drive">
-      <header>
+      <header className="flex items-center gap-4">
         <strong>MiniDrive</strong>
-        <span>{user.username}</span>
-        <button type="button" onClick={onLogout}>Вийти</button>
+        <Badge variant="secondary" className="ml-auto">
+          {user.username}
+        </Badge>
+        <Button type="button" variant="ghost" onClick={onLogout}>
+          Вийти
+        </Button>
       </header>
-      <div className="toolbar">
+      <div className="flex flex-wrap items-center gap-3">
         <SortControl order={vm.order} onChange={(o) => update((m) => m.setOrder(o))} />
         <FilterControl filter={vm.filter} onChange={(f) => update((m) => m.setFilter(f))} />
         <ColumnToggle columns={vm.columns} onToggle={(k) => update((m) => m.toggleColumn(k))} />
-        <button type="button" onClick={refresh} disabled={busy}>Оновити</button>
-        <button type="button" onClick={downloadSelected} disabled={!vm.selected}>Вивантажити</button>
-        <button type="button" onClick={deleteSelected} disabled={!vm.selected}>Видалити</button>
+        <Button type="button" variant="outline" onClick={refresh} disabled={busy}>
+          Оновити
+        </Button>
+        <Button type="button" variant="outline" onClick={downloadSelected} disabled={!vm.selected}>
+          Вивантажити
+        </Button>
+        <Button type="button" variant="destructive" onClick={() => setConfirmDelete(true)} disabled={!vm.selected}>
+          Видалити
+        </Button>
       </div>
-      {error && <p className="error">{error}</p>}
+      {error && <p className="text-destructive">{error}</p>}
       <SyncPanel onSynced={refresh} />
       <div className="drive-body">
         <UploadDropzone onFiles={uploadFiles} busy={working}>
@@ -93,6 +120,21 @@ export function DriveScreen({ user, onLogout }: Props) {
         </UploadDropzone>
         <PreviewPanel file={vm.selected} loadContent={loadContent} />
       </div>
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Видалити файл?</DialogTitle>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmDelete(false)}>
+              Скасувати
+            </Button>
+            <Button type="button" variant="destructive" onClick={deleteSelected}>
+              Видалити
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

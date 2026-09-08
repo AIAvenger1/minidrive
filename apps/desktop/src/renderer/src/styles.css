@@ -1,22 +1,29 @@
-:root { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 14px; color: #1c2230; background: #f4f5f8; }
-* { box-sizing: border-box; }
-body { margin: 0; }
-button { padding: 6px 12px; border: 1px solid #c7ccd6; border-radius: 6px; background: #fff; cursor: pointer; }
-button:disabled { opacity: .5; cursor: default; }
-button.link { border: none; background: none; color: #3d5a99; }
-input, select { padding: 6px 8px; border: 1px solid #c7ccd6; border-radius: 6px; font: inherit; }
-.error { color: #b3261e; margin: 4px 0; }
+.login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-.login-card { width: 360px; display: grid; gap: 12px; padding: 24px; background: #fff; border: 1px solid #d9dde6; border-radius: 8px; }
-.login-card label { display: grid; gap: 4px; }
-.login-card input { width: 100%; }
+.drive {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100vh;
+  padding: 12px;
+}
+.drive-body {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+  min-height: 0;
+  flex: 1;
+}
+.drive-body > * {
+  min-height: 0;
+  overflow: auto;
+}
 
-.drive { display: flex; flex-direction: column; gap: 12px; height: 100vh; padding: 12px; }
-.drive > header { display: flex; gap: 16px; align-items: center; }
-.drive > header span { margin-left: auto; }
-.drive-body { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; min-height: 0; flex: 1; }
-.drive-body > * { min-height: 0; overflow: auto; }
-.sync { grid-column: 1 / -1; display: grid; gap: 6px; padding: 10px 12px; background: #fff; border: 1px solid #d9dde6; border-radius: 8px; }
-.sync .folder, .sync .actions { display: flex; gap: 12px; align-items: center; }
-.sync .folder span { font-family: Menlo, monospace; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.sync {
+  grid-column: 1 / -1;
+}
