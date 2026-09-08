@@ -15,3 +15,5 @@ __pycache__/
 .yarn/
 *.tsbuildinfo
 .worktrees/
+apps/web/AGENTS.md
+apps/web/CLAUDE.md

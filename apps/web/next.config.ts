@@ -4,7 +4,7 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   output: 'standalone',
   devIndicators: false,
-  outputFileTracingRoot: path.join(process.cwd(), '../..'),
+  outputFileTracingRoot: path.resolve(__dirname, '../..'),
   transpilePackages: ['@minidrive/shared', '@minidrive/ui'],
 };
 

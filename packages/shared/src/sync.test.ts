@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { computeSyncPlan, emptySyncReport, failedSyncReport } from './sync';
+import { computeSyncPlan, emptySyncReport, failedSyncReport, runSyncPlan } from './sync';
 import { makeFileDto } from './testFixtures';
-import type { FileDto, LocalFileInfo } from './types';
+import type { FileDto, LocalFileInfo, SyncPlan } from './types';
 
 const t0 = Date.parse('2026-09-01T10:00:00.000Z');
 const remote = (name: string, size: number, updatedAtMs: number): FileDto =>
@@ -55,5 +55,79 @@ describe('emptySyncReport', () => {
 describe('failedSyncReport', () => {
   it('records a single failure with the given message', () => {
     expect(failedSyncReport('boom')).toEqual({ uploaded: 0, downloaded: 0, skipped: 0, failed: 1, errors: ['boom'] });
+  });
+});
+
+describe('runSyncPlan', () => {
+  it('counts uploads, downloads and skipped from the plan', async () => {
+    const plan: SyncPlan = {
+      uploads: [{ kind: 'upload', name: 'a.txt', reason: 'only local' }],
+      downloads: [{ kind: 'download', name: 'b.png', reason: 'only remote' }],
+      skipped: [{ kind: 'skip', name: 'c.cs', reason: 'unchanged' }],
+    };
+    const remoteFiles = [remote('b.png', 5, t0)];
+    const report = await runSyncPlan(plan, remoteFiles, {
+      upload: async () => {},
+      download: async () => {},
+    });
+    expect(report).toEqual({ uploaded: 1, downloaded: 1, skipped: 1, failed: 0, errors: [] });
+  });
+
+  it('records a failure without aborting the rest of the plan', async () => {
+    const plan: SyncPlan = {
+      uploads: [
+        { kind: 'upload', name: 'fails.txt', reason: 'only local' },
+        { kind: 'upload', name: 'ok.txt', reason: 'only local' },
+      ],
+      downloads: [],
+      skipped: [],
+    };
+    const uploaded: string[] = [];
+    const report = await runSyncPlan(plan, [], {
+      upload: async (name) => {
+        if (name === 'fails.txt') throw new Error('disk full');
+        uploaded.push(name);
+      },
+      download: async () => {},
+    });
+    expect(report.uploaded).toBe(1);
+    expect(report.failed).toBe(1);
+    expect(report.errors).toEqual(['fails.txt: disk full']);
+    expect(uploaded).toEqual(['ok.txt']);
+  });
+
+  it('ticks progress once per action across uploads and downloads', async () => {
+    const plan: SyncPlan = {
+      uploads: [{ kind: 'upload', name: 'a.txt', reason: 'only local' }],
+      downloads: [{ kind: 'download', name: 'b.png', reason: 'only remote' }],
+      skipped: [],
+    };
+    const remoteFiles = [remote('b.png', 5, t0)];
+    const ticks: Array<[number, number]> = [];
+    await runSyncPlan(
+      plan,
+      remoteFiles,
+      { upload: async () => {}, download: async () => {} },
+      (done, total) => ticks.push([done, total]),
+    );
+    expect(ticks).toEqual([
+      [1, 2],
+      [2, 2],
+    ]);
+  });
+
+  it('counts a missing remote entry as a failure', async () => {
+    const plan: SyncPlan = {
+      uploads: [],
+      downloads: [{ kind: 'download', name: 'gone.txt', reason: 'only remote' }],
+      skipped: [],
+    };
+    const report = await runSyncPlan(plan, [], {
+      upload: async () => {},
+      download: async () => {},
+    });
+    expect(report.downloaded).toBe(0);
+    expect(report.failed).toBe(1);
+    expect(report.errors).toEqual(['gone.txt: remote entry disappeared']);
   });
 });

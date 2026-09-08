@@ -8,6 +8,8 @@ export * from './FilterControl';
 export * from './ColumnToggle';
 export * from './PreviewPanel';
 export * from './UploadDropzone';
+export * from './SyncPanel';
+export * from './SyncReportSummary';
 export * from './lib/utils';
 export * from './components/ui/button';
 export * from './components/ui/input';

@@ -3,6 +3,7 @@ name: minidrive-prod
 services:
   caddy:
     image: caddy:2-alpine
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
@@ -22,6 +23,7 @@ services:
       dockerfile: docker/web.Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://${DOMAIN}/api
+    restart: unless-stopped
     depends_on:
       api:
         condition: service_healthy
@@ -30,6 +32,7 @@ services:
     build:
       context: ..
       dockerfile: docker/api.Dockerfile
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,7 +46,7 @@ services:
       S3_ACCESS_KEY: ${MINIO_ROOT_USER}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       S3_BUCKET: minidrive
-      CORS_ORIGINS: https://${DOMAIN}
+      CORS_ORIGINS: "*"
       SWAGGER_ENABLED: "false"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
@@ -53,6 +56,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -66,7 +70,8 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    restart: unless-stopped
     command: server /data
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
