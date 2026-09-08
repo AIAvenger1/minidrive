@@ -27,7 +27,7 @@ toc-title: "Зміст"
 | Цифра | Список | Значення для проєкту |
 |---|---|---|
 | 4 | ТИПИ файлів, вміст яких показується при кліку | `.cs` — як текст, `.jpg` — як зображення |
-| 6 | ОПЕРАЦІЇ | сортування за назвою (зростання і спадання); фільтр «усі файли» / «лише `.cpp`, `.png`» |
+| 6 | ОПЕРАЦІЇ | сортування за назвою (зростання і спадання); фільтр «усі файли» / «лише `.cpp`» / «лише `.png`» |
 
 Етапи виконання та оцінювання: етап 1 — UML-специфікація (2 б.); етап 2 — десктоп-версія з unit-тестами та звітом (13 б.); етап 3 — веб-орієнтована версія (13 б.); етап 4 — порівняльний аналіз (2 б.). Бонуси: drag-and-drop при за/вивантаженні (+5 б.) та публікація серверної частини в інтернеті (+5 б.). Обидва бонуси заплановано.
 
@@ -49,7 +49,7 @@ toc-title: "Зміст"
 | R2 | Перегляд файлів з атрибутами: назва, дата створення, дата зміни, хто завантажив, хто редагував (додатково — розмір і тип) | UC4 |
 | R3 | Показ / приховування будь-якого стовпця, крім назви | UC7 |
 | R4 | Сортування за назвою за зростанням і спаданням (операція варіанта) | UC5 |
-| R5 | Фільтр: усі файли / лише `.cpp` і `.png` (операція варіанта) | UC6 |
+| R5 | Фільтр: усі файли / лише `.cpp` / лише `.png` (операція варіанта) | UC6 |
 | R6 | Клік по файлу показує вміст: `.cs` як текст, `.jpg` як зображення (тип варіанта) | UC8 |
 | R7 | Завантаження файлу (нового або нової версії наявного), вивантаження, видалення | UC9, UC10, UC11, UC12 |
 | R8 | Синхронізація обраної локальної папки з віддаленим простором | UC13, UC14 |
@@ -84,7 +84,7 @@ toc-title: "Зміст"
 | UC3 | Work with the file storage | кореневий прецедент роботи з кабінетом |
 | UC4 | View the list of files and their attributes | перегляд таблиці файлів з атрибутами |
 | UC5 | Sort by name | сортування за назвою: Ascending / Descending |
-| UC6 | Filter by type | фільтр: All files / Only .cpp, .png |
+| UC6 | Filter by type | фільтр: All files / Only .cpp / Only .png |
 | UC7 | Show / hide table columns | приховування стовпців (Creation date, Modification date, Uploaded by, Edited by, Size) |
 | UC8 | View the file contents | перегляд вмісту: .cs as text / .jpg as image |
 | UC9 | Upload file(s) to the storage | завантаження файлів кнопкою (Select and upload) або перетягуванням (Drag-and-drop) |
@@ -138,7 +138,7 @@ toc-title: "Зміст"
 
 ![Рис. 3. Діаграма прецедентів](../uml/img/01-use-case.png){width=15cm}
 
-**Пояснення.** Діаграма побудована каскадом: дійова особа User пов'язана з кореневими прецедентами `Sign up`, `Log in to the system`, `Log out from the system` та `Work with the file storage`. Кореневий прецедент роботи зі сховищем через `«include»` вимагає входу в систему та перегляду списку файлів (`View the list of files and their attributes`). Від перегляду списку через `«extend»` відгалужуються операції варіанта — `Sort by name` з параметрами Ascending / Descending та `Filter by type` з параметрами All files / Only .cpp, .png, — а також `Show / hide table columns` (Creation date, Modification date, Uploaded by, Edited by, Size) і `View the file contents` (.cs as text, .jpg as image). Від кореня відгалужуються операції над файлами: `Upload file(s) to the storage` з підваріантами Select and upload та Drag-and-drop, `Update a file (new version)`, `Download file(s)` з підваріантом Drag out of the window, `Delete file(s)`, а також гілка синхронізації: `Bind / change local folder` та `Synchronize with the local folder` з розширеннями Automatic tracking of folder changes і Resolve version conflicts. Примітки фіксують передумову авторизації, побічний ефект оновлення файлу (зміна дати та поля «хто редагував»), передумову прив'язаної папки, правило «перемагає новіша версія» та обмеження «лише десктоп-клієнт» для перетягування з вікна та автоматичного відстеження.
+**Пояснення.** Діаграма побудована каскадом: дійова особа User пов'язана з кореневими прецедентами `Sign up`, `Log in to the system`, `Log out from the system` та `Work with the file storage`. Кореневий прецедент роботи зі сховищем через `«include»` вимагає входу в систему та перегляду списку файлів (`View the list of files and their attributes`). Від перегляду списку через `«extend»` відгалужуються операції варіанта — `Sort by name` з параметрами Ascending / Descending та `Filter by type` з параметрами All files / Only .cpp / Only .png, — а також `Show / hide table columns` (Creation date, Modification date, Uploaded by, Edited by, Size) і `View the file contents` (.cs as text, .jpg as image). Від кореня відгалужуються операції над файлами: `Upload file(s) to the storage` з підваріантами Select and upload та Drag-and-drop, `Update a file (new version)`, `Download file(s)` з підваріантом Drag out of the window, `Delete file(s)`, а також гілка синхронізації: `Bind / change local folder` та `Synchronize with the local folder` з розширеннями Automatic tracking of folder changes і Resolve version conflicts. Примітки фіксують передумову авторизації, побічний ефект оновлення файлу (зміна дати та поля «хто редагував»), передумову прив'язаної папки, правило «перемагає новіша версія» та обмеження «лише десктоп-клієнт» для перетягування з вікна та автоматичного відстеження.
 
 ## Рис. 4. Діаграма класів — доменна модель
 

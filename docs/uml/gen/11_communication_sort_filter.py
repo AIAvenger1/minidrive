@@ -5,7 +5,7 @@ Objects and messages mirror the VOPC diagram 03 (boundary / control / entity rol
   boundary  (blue)   :FileTable, :SortControl, :FilterControl
   control   (yellow) :DriveViewModel, :FileListUtils, :ApiClient
   entity    (green)  files : FileDto[]
-Sequence numbers: 1 = load, 2 = sort by name (asc/desc), 3 = filter all / only .cpp, .png, 4 = redraw.
+Sequence numbers: 1 = load, 2 = sort by name (asc/desc), 3 = filter all / only .cpp / only .png, 4 = redraw.
 
 Layout notes
   * Graphviz routes every message (route_edges=True), so opposite-direction pairs such as
@@ -43,8 +43,8 @@ d.directed(api, vm, "1.4: files")                    # reply on a second link (1
 d.directed(user, sort_ctl, "2: toggleOrder()")
 d.directed(sort_ctl, vm, "2.1: setOrder(order)")
 d.directed(vm, utils, "2.2: sortByName(files, order)")
-# 3 — filter: all files / only .cpp, .png
-d.directed(user, filter_ctl, "3: select(CPP_PNG)")
+# 3 — filter: all files / only .cpp / only .png
+d.directed(user, filter_ctl, "3: select(PNG)")
 d.directed(filter_ctl, vm, "3.1: setFilter(filter)")
 d.directed(vm, utils, "3.2: filterByType(sorted, filter)")
 # 4 — redraw the table with the visible (sorted + filtered) list
@@ -57,7 +57,7 @@ n_get = d.note("1.3: GET /files", "yellow")
 d.note_link(n_get, api, place="right")
 
 n_seq = d.note("Sequence numbers: 1 = load, 2 = sort by name (asc/desc),\n"
-               "3 = filter all / only .cpp, .png, 4 = redraw", "yellow", w=360)
+               "3 = filter all / only .cpp / only .png, 4 = redraw", "yellow", w=360)
 # Free-standing note under the content: the library only exposes this placement through
 # legend() (a text box), so reuse the same anchor for a real UML note shape.
 d._nodes[n_seq].anchor = "__content__"
