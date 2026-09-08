@@ -22,6 +22,7 @@ COPY --from=build /repo/packages/shared/dist packages/shared/dist
 COPY --from=build /repo/apps/api/package.json apps/api/package.json
 COPY --from=build /repo/apps/api/dist apps/api/dist
 COPY --from=build /repo/apps/api/prisma apps/api/prisma
+COPY --from=build /repo/apps/api/tsconfig.json apps/api/tsconfig.json
 RUN chown -R node:node /repo
 WORKDIR /repo/apps/api
 USER node

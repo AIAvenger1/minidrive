@@ -227,7 +227,7 @@ token in `SessionStore`; a 401 clears it and returns to the login screen.
 
 - **Local (Stage 2)**: developer macOS runs `docker compose up` (containers `api`, `postgres`,
   `minio`) and the Electron app (`yarn workspace @minidrive/desktop dev`). Web dev server optional.
-- **Cloud (Stage 3 bonus)**: one Linux VM (DigitalOcean droplet via GitHub Student Developer Pack)
+- **Cloud (Stage 3 bonus)**: one Linux VM (Hetzner Cloud CX23; domain from the GitHub Student Developer Pack)
   runs Docker Compose with `caddy` (TLS reverse proxy), `api`, `web` (Next.js standalone),
   `postgres`, `minio`. Public URL for the web client and the API; the desktop client points at the
   same API URL.

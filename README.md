@@ -39,4 +39,6 @@ docker compose -f docker/compose.prod.yml --env-file docker/.env.prod up -d --bu
 
 Веб-клієнт піднімається на `https://DOMAIN`, API — на `https://DOMAIN/api` (Caddy сам видає TLS-сертифікат через Let's Encrypt). Десктоп-клієнт підключати до `https://DOMAIN/api` як адресу сервера. Swagger (`/api/docs`) у production вимкнено (`SWAGGER_ENABLED=false`).
 
+Публічний екземпляр: <https://minidrive.trelawney.tech> (Hetzner Cloud, Ubuntu 24.04, Docker). Тестові користувачі створюються через `POST /api/auth/register` або `ts-node prisma/seed.ts` у контейнері `api`.
+
 CI (`.github/workflows/ci.yml`) при кожному push і pull request збирає проєкт (`yarn build`) і запускає тести (`yarn test`).
