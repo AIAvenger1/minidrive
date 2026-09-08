@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FileDto, UserDto } from '@minidrive/shared';
 import { ColumnToggle, FileTable, FilterControl, PreviewPanel, SortControl, UploadDropzone, useDrive } from '@minidrive/ui';
+import { SyncPanel } from '../components/SyncPanel';
 import { getApi } from '../api';
 
 type Props = { user: UserDto; onLogout: () => void };
@@ -76,6 +77,7 @@ export function DriveScreen({ user, onLogout }: Props) {
         <button type="button" onClick={deleteSelected} disabled={!vm.selected}>Видалити</button>
       </div>
       {error && <p className="error">{error}</p>}
+      <SyncPanel onSynced={refresh} />
       <div className="drive-body">
         <UploadDropzone onFiles={uploadFiles} busy={working}>
           <FileTable
