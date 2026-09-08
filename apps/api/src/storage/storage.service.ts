@@ -1,18 +1,30 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import {
-  CreateBucketCommand, DeleteObjectCommand, GetObjectCommand, HeadBucketCommand, PutObjectCommand, S3Client,
+  CreateBucketCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadBucketCommand,
+  PutObjectCommand,
+  S3Client,
 } from '@aws-sdk/client-s3';
-import { Readable } from 'stream';
+import type { Readable } from 'stream';
 import { loadConfig } from '../config';
 
 function isMissingBucketError(err: unknown): boolean {
   const e = err as { $metadata?: { httpStatusCode?: number }; name?: string };
-  return e?.$metadata?.httpStatusCode === 404 || e?.name === 'NotFound' || e?.name === 'NoSuchBucket';
+  return (
+    e?.$metadata?.httpStatusCode === 404 ||
+    e?.name === 'NotFound' ||
+    e?.name === 'NoSuchBucket'
+  );
 }
 
 @Injectable()
 export class StorageService implements OnModuleInit {
-  constructor(private readonly s3: S3Client, private readonly bucket: string) {}
+  constructor(
+    private readonly s3: S3Client,
+    private readonly bucket: string,
+  ) {}
 
   static fromEnv(): StorageService {
     const { s3 } = loadConfig();
@@ -38,15 +50,33 @@ export class StorageService implements OnModuleInit {
   }
 
   async putObject(key: string, body: Buffer, mimeType: string): Promise<void> {
-    await this.s3.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: body, ContentType: mimeType }));
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: mimeType,
+      }),
+    );
   }
 
-  async getObject(key: string): Promise<{ stream: Readable; mimeType: string; size?: number }> {
-    const res = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
-    return { stream: res.Body as Readable, mimeType: res.ContentType ?? 'application/octet-stream', size: res.ContentLength };
+  async getObject(
+    key: string,
+  ): Promise<{ stream: Readable; mimeType: string; size?: number }> {
+    const res = await this.s3.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    if (!res.Body) throw new NotFoundException('Object not found');
+    return {
+      stream: res.Body as Readable,
+      mimeType: res.ContentType ?? 'application/octet-stream',
+      size: res.ContentLength,
+    };
   }
 
   async deleteObject(key: string): Promise<void> {
-    await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    await this.s3.send(
+      new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
   }
 }
