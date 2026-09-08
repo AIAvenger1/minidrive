@@ -1,15 +1,16 @@
 import {
   computeSyncPlan,
-  emptySyncReport,
   isSyncableName,
   pruneLedger,
   reconcileWithLedger,
   recordTransfer,
-  type ApiClient,
+  runSyncPlan,
   type FileDto,
   type LocalFileInfo,
+  type SyncApi,
   type SyncLedger,
   type SyncLedgerEntry,
+  type SyncProgress,
   type SyncReport,
 } from '@minidrive/shared';
 
@@ -22,9 +23,7 @@ export type DirectoryHandleLike = {
   values(): AsyncIterable<FileHandleLike | DirectoryHandleLike>;
   getFileHandle(name: string, options?: { create?: boolean }): Promise<WritableFileHandleLike>;
 };
-export type SyncApi = Pick<ApiClient, 'listFiles' | 'upload' | 'download'>;
 export type LedgerStore = { load(folder: string): SyncLedger; save(folder: string, ledger: SyncLedger): void };
-type Progress = (done: number, total: number) => void;
 type PickerWindow = { showDirectoryPicker(options: { mode: 'readwrite' }): Promise<DirectoryHandleLike> };
 
 export function supportsFolderSync(): boolean {
@@ -48,39 +47,24 @@ export class BrowserSyncEngine {
     return files;
   }
 
-  async synchronize(dir: DirectoryHandleLike, onProgress?: Progress): Promise<SyncReport> {
+  async synchronize(dir: DirectoryHandleLike, onProgress?: SyncProgress): Promise<SyncReport> {
     const [scanned, remote] = await Promise.all([this.scan(dir), this.api.listFiles()]);
     let ledger = pruneLedger(this.ledgers.load(dir.name), scanned);
     const plan = computeSyncPlan(reconcileWithLedger(scanned, ledger), remote);
-    const remoteByName = new Map(remote.map((r) => [r.name, r]));
-    const report = emptySyncReport();
-    report.skipped = plan.skipped.length;
-    const total = plan.uploads.length + plan.downloads.length;
-    let done = 0;
 
-    for (const action of plan.uploads) {
-      try {
-        ledger = recordTransfer(ledger, action.name, await this.uploadFrom(dir, action.name));
-        report.uploaded += 1;
-      } catch (err) {
-        report.failed += 1;
-        report.errors.push(`${action.name}: ${(err as Error).message}`);
-      }
-      onProgress?.(++done, total);
-    }
-
-    for (const action of plan.downloads) {
-      try {
-        const dto = remoteByName.get(action.name);
-        if (!dto) throw new Error('remote entry disappeared');
-        ledger = recordTransfer(ledger, action.name, await this.downloadTo(dir, dto));
-        report.downloaded += 1;
-      } catch (err) {
-        report.failed += 1;
-        report.errors.push(`${action.name}: ${(err as Error).message}`);
-      }
-      onProgress?.(++done, total);
-    }
+    const report = await runSyncPlan(
+      plan,
+      remote,
+      {
+        upload: async (name) => {
+          ledger = recordTransfer(ledger, name, await this.uploadFrom(dir, name));
+        },
+        download: async (file) => {
+          ledger = recordTransfer(ledger, file.name, await this.downloadTo(dir, file));
+        },
+      },
+      onProgress,
+    );
 
     this.ledgers.save(dir.name, ledger);
     return report;
@@ -93,6 +77,7 @@ export class BrowserSyncEngine {
   }
 
   private async downloadTo(dir: DirectoryHandleLike, file: FileDto): Promise<SyncLedgerEntry> {
+    if (!isSyncableName(file.name)) throw new Error('unsafe file name');
     const blob = await this.api.download(file.id);
     const handle = await dir.getFileHandle(file.name, { create: true });
     const writable = await handle.createWritable();

@@ -1,6 +1,14 @@
 import type { FileDto, LocalFileInfo, SyncAction, SyncPlan, SyncReport } from './types';
+import type { ApiClient } from './apiClient';
 
 export const SKEW_MS = 2000;
+
+export type SyncApi = Pick<ApiClient, 'listFiles' | 'upload' | 'download'>;
+export type SyncProgress = (done: number, total: number) => void;
+export type SyncTransfers = {
+  upload(name: string): Promise<void>;
+  download(file: FileDto): Promise<void>;
+};
 
 export function computeSyncPlan(local: LocalFileInfo[], remote: FileDto[]): SyncPlan {
   const plan: SyncPlan = { uploads: [], downloads: [], skipped: [] };
@@ -47,4 +55,43 @@ export function emptySyncReport(): SyncReport {
 
 export function failedSyncReport(message: string): SyncReport {
   return { uploaded: 0, downloaded: 0, skipped: 0, failed: 1, errors: [message] };
+}
+
+export async function runSyncPlan(
+  plan: SyncPlan,
+  remote: FileDto[],
+  transfers: SyncTransfers,
+  onProgress?: SyncProgress,
+): Promise<SyncReport> {
+  const remoteByName = new Map(remote.map((r) => [r.name, r]));
+  const report = emptySyncReport();
+  report.skipped = plan.skipped.length;
+  const total = plan.uploads.length + plan.downloads.length;
+  let done = 0;
+
+  for (const action of plan.uploads) {
+    try {
+      await transfers.upload(action.name);
+      report.uploaded += 1;
+    } catch (err) {
+      report.failed += 1;
+      report.errors.push(`${action.name}: ${(err as Error).message}`);
+    }
+    onProgress?.(++done, total);
+  }
+
+  for (const action of plan.downloads) {
+    try {
+      const dto = remoteByName.get(action.name);
+      if (!dto) throw new Error('remote entry disappeared');
+      await transfers.download(dto);
+      report.downloaded += 1;
+    } catch (err) {
+      report.failed += 1;
+      report.errors.push(`${action.name}: ${(err as Error).message}`);
+    }
+    onProgress?.(++done, total);
+  }
+
+  return report;
 }

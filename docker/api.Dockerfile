@@ -22,6 +22,8 @@ COPY --from=build /repo/packages/shared/dist packages/shared/dist
 COPY --from=build /repo/apps/api/package.json apps/api/package.json
 COPY --from=build /repo/apps/api/dist apps/api/dist
 COPY --from=build /repo/apps/api/prisma apps/api/prisma
+RUN chown -R node:node /repo
 WORKDIR /repo/apps/api
+USER node
 EXPOSE 3000
 CMD ["sh", "-c", "/repo/node_modules/.bin/prisma migrate deploy && node dist/main"]
