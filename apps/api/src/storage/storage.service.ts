@@ -23,8 +23,12 @@ export class StorageService implements OnModuleInit {
   async onModuleInit() {
     try {
       await this.s3.send(new HeadBucketCommand({ Bucket: this.bucket }));
-    } catch {
-      await this.s3.send(new CreateBucketCommand({ Bucket: this.bucket }));
+    } catch (err) {
+      if (err?.$metadata?.httpStatusCode === 404 || err?.name === 'NotFound' || err?.name === 'NoSuchBucket') {
+        await this.s3.send(new CreateBucketCommand({ Bucket: this.bucket }));
+      } else {
+        throw err;
+      }
     }
   }
 
