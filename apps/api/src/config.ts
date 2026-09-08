@@ -11,6 +11,7 @@ export type AppConfig = {
   };
   corsOrigins: string[];
   maxFileBytes: number;
+  swaggerEnabled: boolean;
 };
 
 let cached: AppConfig | null = null;
@@ -42,6 +43,7 @@ function build(env: NodeJS.ProcessEnv): AppConfig {
       .map((s) => s.trim())
       .filter(Boolean),
     maxFileBytes: num(env.MAX_FILE_MB, 50) * 1024 * 1024,
+    swaggerEnabled: (env.SWAGGER_ENABLED ?? 'true') !== 'false',
   };
 }
 

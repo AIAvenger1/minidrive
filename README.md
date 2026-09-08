@@ -24,3 +24,19 @@ yarn workspace @minidrive/desktop dev
 Веб-клієнт: `cp apps/web/.env.example apps/web/.env.local`, потім `yarn web:dev` і відкрити `http://localhost:3001`.
 
 Тести: `yarn test` з кореня. Пакування десктоп-клієнта: `yarn workspace @minidrive/desktop build:mac` (або `build:win`/`build:linux`) — результат: `apps/desktop/dist/MiniDrive-1.0.0-arm64.dmg` і `apps/desktop/dist/MiniDrive-1.0.0-arm64.zip`. Детальніше — у звітах `docs/reports/stage1-uml.md` та `docs/reports/stage2-desktop.md`.
+
+## Розгортання (production)
+
+```bash
+cp docker/.env.prod.example docker/.env.prod
+```
+
+У `docker/.env.prod` встановити `DOMAIN` — публічне ім'я хоста, яке вказує на VM, і задати паролі для PostgreSQL, MinIO та `JWT_SECRET`. На VM мають бути відкриті порти 80 і 443. Далі:
+
+```bash
+docker compose -f docker/compose.prod.yml --env-file docker/.env.prod up -d --build
+```
+
+Веб-клієнт піднімається на `https://DOMAIN`, API — на `https://DOMAIN/api` (Caddy сам видає TLS-сертифікат через Let's Encrypt). Десктоп-клієнт підключати до `https://DOMAIN/api` як адресу сервера. Swagger (`/api/docs`) у production вимкнено (`SWAGGER_ENABLED=false`).
+
+CI (`.github/workflows/ci.yml`) при кожному push і pull request збирає проєкт (`yarn build`) і запускає тести (`yarn test`).
