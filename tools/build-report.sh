@@ -8,14 +8,14 @@ DIR="$(cd "$(dirname "$SRC")" && pwd)"
 BASE="$(basename "${SRC%.md}")"
 cd "$DIR"
 
-COMMON=(--from markdown+smart-implicit_figures --toc --toc-depth=2 --number-sections -V lang=uk --resource-path=".:..:../uml/img")
+COMMON=(--from markdown+smart+implicit_figures --toc --toc-depth=2 --number-sections -V lang=uk --resource-path=".:..:../uml/img")
 
 echo "[report] DOCX → $DIR/$BASE.docx"
 pandoc "$BASE.md" "${COMMON[@]}" -o "$BASE.docx"
 
 echo "[report] PDF  → $DIR/$BASE.pdf"
 pandoc "$BASE.md" "${COMMON[@]}" \
-  --pdf-engine=xelatex \
+  --pdf-engine=xelatex --include-in-header ../../tools/titlepage.tex \
   -V mainfont="Times New Roman" -V sansfont="Arial" -V monofont="Menlo" \
   -V fontsize=12pt -V geometry:margin=2cm -V linestretch=1.15 \
   -V colorlinks=true \

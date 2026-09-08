@@ -1,0 +1,27 @@
+\usepackage{caption}
+\captionsetup{labelsep=period,font=small}
+\addto\captionsukrainian{\renewcommand{\figurename}{Рисунок}}
+\makeatletter
+\renewcommand{\maketitle}{%
+\begin{titlepage}
+\centering
+{\large Київський національний університет\\імені Тараса Шевченка\par}
+\vspace{4.5cm}
+{\Huge\bfseries Звіт\par}
+\vspace{0.6cm}
+{\large до лабораторної роботи №1\\на тему:\par}
+\vspace{0.3cm}
+{\large\bfseries «\@title»\par}
+\vfill
+\begin{flushright}
+Студента четвертого курсу\\
+групи МІ-41\\
+факультету комп'ютерних наук\\
+та кібернетики\\
+Петрова Богдана Вікторовича
+\end{flushright}
+\vspace{2.5cm}
+{\bfseries\itshape Київ-2026\par}
+\end{titlepage}
+}
+\makeatother
