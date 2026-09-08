@@ -13,6 +13,13 @@ export function DriveScreen({ user, onLogout }: Props) {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const unsubscribe = window.minidrive.file.onDragOutError((message) => setError(message));
+    return () => {
+      unsubscribe();
+    };
+  }, [setError]);
+
   const loadContent = useCallback((f: FileDto) => getApi().download(f.id), []);
 
   async function uploadFiles(files: File[]) {

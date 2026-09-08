@@ -28,6 +28,11 @@ const minidrive = {
   file: {
     saveAs: (name: string, bytes: ArrayBuffer) => ipcRenderer.invoke('file:saveAs', name, bytes),
     dragOut: (file: unknown) => ipcRenderer.send('file:dragOut', file),
+    onDragOutError: (cb: (message: string) => void) => {
+      const listener = (_: unknown, message: string) => cb(message);
+      ipcRenderer.on('file:dragOutError', listener);
+      return () => ipcRenderer.removeListener('file:dragOutError', listener);
+    },
   },
 };
 

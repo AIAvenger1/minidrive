@@ -8,7 +8,7 @@ export class DragOutHandler {
   constructor(private readonly iconPath: string) {}
 
   async startDrag(sender: WebContents, api: ApiClient, file: FileDto): Promise<void> {
-    const dir = join(app.getPath('temp'), 'minidrive', file.id);
+    const dir = join(app.getPath('temp'), 'minidrive', file.id, String(Date.parse(file.updatedAt)));
     const target = join(dir, file.name);
     if (!existsSync(target)) {
       await mkdir(dir, { recursive: true });

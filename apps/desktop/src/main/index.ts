@@ -27,8 +27,8 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('ua.knu.minidrive');
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window));
-  const win = createWindow();
-  registerIpc(win);
+  registerIpc();
+  createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
