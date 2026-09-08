@@ -9,8 +9,7 @@ export default defineConfig({
   renderer: {
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src'),
-        '@': resolve('../../packages/ui/src')
+        '@renderer': resolve('src/renderer/src')
       }
     },
     plugins: [react(), tailwindcss()]

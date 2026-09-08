@@ -13,6 +13,7 @@
     "prebuild": "yarn workspace @minidrive/shared build",
     "build": "yarn workspaces foreach -A --topological-dev run build",
     "test": "yarn workspaces foreach -A run test",
+    "web:dev": "yarn workspace @minidrive/web dev",
     "stack:up": "docker compose -f docker/compose.yml up -d --build --wait",
     "stack:down": "docker compose -f docker/compose.yml down",
     "stack:reset": "docker compose -f docker/compose.yml down -v"

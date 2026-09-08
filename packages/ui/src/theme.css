@@ -2,6 +2,7 @@
 
 @source "../src";
 @source "../../../apps/desktop/src/renderer/src";
+@source "../../../apps/web/src";
 
 @custom-variant dark (&:is(.dark *));
 

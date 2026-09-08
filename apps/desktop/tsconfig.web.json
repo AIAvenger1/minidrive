@@ -14,9 +14,6 @@
     "paths": {
       "@renderer/*": [
         "./src/renderer/src/*"
-      ],
-      "@/*": [
-        "../../packages/ui/src/*"
       ]
     }
   }

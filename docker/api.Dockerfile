@@ -6,6 +6,7 @@ COPY packages/shared/package.json packages/shared/
 COPY packages/ui/package.json packages/ui/
 COPY apps/api/package.json apps/api/
 COPY apps/desktop/package.json apps/desktop/
+COPY apps/web/package.json apps/web/
 RUN yarn workspaces focus @minidrive/api @minidrive/shared
 COPY packages/shared packages/shared
 COPY apps/api apps/api
