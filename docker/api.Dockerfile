@@ -3,7 +3,9 @@ RUN corepack enable
 WORKDIR /repo
 COPY package.json yarn.lock .yarnrc.yml tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/
+COPY packages/ui/package.json packages/ui/
 COPY apps/api/package.json apps/api/
+COPY apps/desktop/package.json apps/desktop/
 RUN yarn workspaces focus @minidrive/api @minidrive/shared
 COPY packages/shared packages/shared
 COPY apps/api apps/api
