@@ -1,5 +1,6 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { join } from 'path';
+import { promises as fs } from 'fs';
 import { electronApp, is, optimizer } from '@electron-toolkit/utils';
 import { getSettings, setToken, updateSettings } from './settings';
 
@@ -29,6 +30,13 @@ function registerIpc(): void {
   ipcMain.handle('settings:set', (_e, patch) => updateSettings(patch));
   ipcMain.handle('session:setToken', (_e, token: string | null) => setToken(token));
   ipcMain.handle('session:getToken', () => getSettings().token);
+  ipcMain.handle('file:saveAs', async (e, name: string, bytes: ArrayBuffer) => {
+    const win = BrowserWindow.fromWebContents(e.sender);
+    const { canceled, filePath } = await dialog.showSaveDialog(win!, { defaultPath: name });
+    if (canceled || !filePath) return null;
+    await fs.writeFile(filePath, Buffer.from(bytes));
+    return filePath;
+  });
 }
 
 app.whenReady().then(() => {

@@ -9,6 +9,9 @@ const minidrive = {
     setToken: (token: string | null) => ipcRenderer.invoke('session:setToken', token),
     getToken: () => ipcRenderer.invoke('session:getToken'),
   },
+  file: {
+    saveAs: (name: string, bytes: ArrayBuffer) => ipcRenderer.invoke('file:saveAs', name, bytes),
+  },
 };
 
 contextBridge.exposeInMainWorld('minidrive', minidrive);
