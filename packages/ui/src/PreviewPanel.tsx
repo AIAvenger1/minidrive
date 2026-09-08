@@ -8,6 +8,7 @@ export function PreviewPanel({ file, loadContent }: Props) {
   const [state, setState] = useState<'idle' | 'loading' | 'unsupported' | 'error'>('idle');
 
   useEffect(() => {
+    let cancelled = false;
     let url: string | null = null;
     setResult(null);
     if (!file) {
@@ -23,12 +24,19 @@ export function PreviewPanel({ file, loadContent }: Props) {
     loadContent(file)
       .then((blob) => preview.render(blob))
       .then((r) => {
+        if (cancelled) {
+          if (r.kind === 'image') URL.revokeObjectURL(r.url);
+          return;
+        }
         if (r.kind === 'image') url = r.url;
         setResult(r);
         setState('idle');
       })
-      .catch(() => setState('error'));
+      .catch(() => {
+        if (!cancelled) setState('error');
+      });
     return () => {
+      cancelled = true;
       if (url) URL.revokeObjectURL(url);
     };
   }, [file, loadContent]);

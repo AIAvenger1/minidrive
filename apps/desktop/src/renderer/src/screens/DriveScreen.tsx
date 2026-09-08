@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { UserDto } from '@minidrive/shared';
+import { useCallback, useEffect, useState } from 'react';
+import type { FileDto, UserDto } from '@minidrive/shared';
 import { ColumnToggle, FileTable, FilterControl, PreviewPanel, SortControl, UploadDropzone, useDrive } from '@minidrive/ui';
 import { getApi } from '../api';
 
@@ -12,6 +12,8 @@ export function DriveScreen({ user, onLogout }: Props) {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  const loadContent = useCallback((f: FileDto) => getApi().download(f.id), []);
 
   async function uploadFiles(files: File[]) {
     setWorking(true);
@@ -27,14 +29,28 @@ export function DriveScreen({ user, onLogout }: Props) {
 
   async function downloadSelected() {
     if (!vm.selected) return;
-    const blob = await getApi().download(vm.selected.id);
-    await window.minidrive.file.saveAs(vm.selected.name, await blob.arrayBuffer());
+    setWorking(true);
+    try {
+      const blob = await getApi().download(vm.selected.id);
+      await window.minidrive.file.saveAs(vm.selected.name, await blob.arrayBuffer());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setWorking(false);
+    }
   }
 
   async function deleteSelected() {
     if (!vm.selected || !confirm(`Видалити «${vm.selected.name}»?`)) return;
-    await getApi().remove(vm.selected.id);
-    await refresh();
+    setWorking(true);
+    try {
+      await getApi().remove(vm.selected.id);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setWorking(false);
+    }
   }
 
   return (
@@ -53,10 +69,12 @@ export function DriveScreen({ user, onLogout }: Props) {
         <button type="button" onClick={deleteSelected} disabled={!vm.selected}>Видалити</button>
       </div>
       {error && <p className="error">{error}</p>}
-      <UploadDropzone onFiles={uploadFiles} busy={working}>
-        <FileTable files={vm.visibleFiles} columns={vm.columns} selected={vm.selected} onSelect={(f) => update((m) => m.select(f))} />
-      </UploadDropzone>
-      <PreviewPanel file={vm.selected} loadContent={(f) => getApi().download(f.id)} />
+      <div className="drive-body">
+        <UploadDropzone onFiles={uploadFiles} busy={working}>
+          <FileTable files={vm.visibleFiles} columns={vm.columns} selected={vm.selected} onSelect={(f) => update((m) => m.select(f))} />
+        </UploadDropzone>
+        <PreviewPanel file={vm.selected} loadContent={loadContent} />
+      </div>
     </div>
   );
 }
