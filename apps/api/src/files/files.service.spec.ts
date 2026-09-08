@@ -48,4 +48,26 @@ describe('FilesService.upsert', () => {
     prisma.fileEntry.findUnique.mockResolvedValue({ ...existing, ownerId: 'someone-else' });
     await expect(service.getContent('u1', 'f1')).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it('removes the created row when the upload to storage fails', async () => {
+    prisma.fileEntry.findUnique.mockResolvedValue(null);
+    prisma.fileEntry.create.mockResolvedValue({ ...existing, id: 'f9', storageKey: '' });
+    storage.putObject.mockRejectedValue(new Error('storage down'));
+    await expect(service.upsert(owner, upload)).rejects.toThrow('storage down');
+    expect(prisma.fileEntry.delete).toHaveBeenCalledWith({ where: { id: 'f9' } });
+    expect(prisma.fileEntry.update).not.toHaveBeenCalled();
+  });
+
+  it('deletes the row before the object', async () => {
+    const order: string[] = [];
+    prisma.fileEntry.findUnique.mockResolvedValue(existing);
+    prisma.fileEntry.delete.mockImplementation(async () => {
+      order.push('prisma.delete');
+    });
+    storage.deleteObject.mockImplementation(async () => {
+      order.push('storage.delete');
+    });
+    await service.delete('u1', 'f1');
+    expect(order).toEqual(['prisma.delete', 'storage.delete']);
+  });
 });

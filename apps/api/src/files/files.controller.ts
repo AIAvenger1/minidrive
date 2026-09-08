@@ -38,7 +38,7 @@ export class FilesController {
       'Content-Type': content.mimeType,
       'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(content.name)}`,
     });
-    if (content.size) res.set('Content-Length', String(content.size));
+    if (typeof content.size === 'number') res.set('Content-Length', String(content.size));
     return new StreamableFile(content.stream);
   }
 

@@ -44,9 +44,14 @@ export class FilesService {
       include: withUsers,
     });
     const storageKey = `users/${owner.id}/${created.id}`;
-    await this.storage.putObject(storageKey, file.buffer, file.mimetype);
-    const saved = await this.prisma.fileEntry.update({ where: { id: created.id }, data: { storageKey }, include: withUsers });
-    return this.toDto(saved);
+    try {
+      await this.storage.putObject(storageKey, file.buffer, file.mimetype);
+      const saved = await this.prisma.fileEntry.update({ where: { id: created.id }, data: { storageKey }, include: withUsers });
+      return this.toDto(saved);
+    } catch (err) {
+      await this.prisma.fileEntry.delete({ where: { id: created.id } });
+      throw err;
+    }
   }
 
   async getContent(ownerId: string, id: string): Promise<{ stream: Readable; mimeType: string; size?: number; name: string }> {
@@ -57,8 +62,8 @@ export class FilesService {
 
   async delete(ownerId: string, id: string): Promise<void> {
     const entry = await this.findOwned(ownerId, id);
-    await this.storage.deleteObject(entry.storageKey);
     await this.prisma.fileEntry.delete({ where: { id } });
+    await this.storage.deleteObject(entry.storageKey);
   }
 
   private async findOwned(ownerId: string, id: string): Promise<FileEntry> {
