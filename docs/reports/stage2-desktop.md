@@ -32,7 +32,7 @@ toc-title: "Зміст"
 REST API (NestJS, префікс без версії, порт 3000):
 
 | Метод і шлях | Призначення | Успіх | Помилки |
-|---|---|---|---|
+|-------------|------------|----------|---------------|
 | `POST /auth/register` | реєстрація нового користувача | 201, `AuthResponseDto` | 409 — ім'я зайняте, 400 — валідація |
 | `POST /auth/login` | вхід за логіном/паролем | 200, `AuthResponseDto` | 401 — невірний пароль |
 | `GET /auth/me` | поточний користувач за токеном | 200, `UserDto` | 401 |
@@ -129,22 +129,24 @@ REST API (NestJS, префікс без версії, порт 3000):
 
 # Unit-тестування
 
+Файли тестів подано як «робочий простір / файл»: `shared` — `packages/shared/src`, `api` — `apps/api/src` (з підкаталогами модулів), `desktop` — `apps/desktop/src/main/sync`.
+
 | Файл тестів | Що перевіряє | К-сть |
-|---|---|---|
-| `packages/shared/src/fileList.test.ts` | `sortByName` (зростання/спадання, стабільність, регістронезалежність — **операція варіанта**), `filterByType` (усі файли / лише `.cpp` / лише `.png` — **операція варіанта**, окремо копія масиву для `'all'`), `extensionOf` (звичайне розширення й порожнє для імені, що закінчується голою крапкою), `isSafeFileName`, `isSyncableName` | 12 |
-| `packages/shared/src/preview.test.ts` | `previewKindOf` для типів варіанта `.cs`→текст, `.jpg`→зображення, узагальнено для інших текстових/растрових, `'none'` для інших; `createPreview`; `FilePreview.canRender` | 7 |
-| `packages/shared/src/columns.test.ts` | `toggleColumn`, незнімний стовпець «Назва» | 2 |
-| `packages/shared/src/driveViewModel.test.ts` | `DriveViewModel`: застосування сортування й фільтра варіанта до `visibleFiles`, неможливість приховати «Назва» | 2 |
-| `packages/shared/src/apiClient.test.ts` | `ApiClient`: bearer-токен, `ApiError` зі статусом, multipart з полем `file`, обрізання кінцевого слеша базової адреси, скачування як blob, видалення файлу, реєстрація, `undefined` на відповідь 204, об'єднання масиву повідомлень помилки | 9 |
-| `packages/shared/src/sync.test.ts` | `computeSyncPlan`: лише локально/лише віддалено, пропуск у межах похибки годинника, перемога новішої версії, різниця розміру як зміна, скачування замість помилки при непридатній для розбору мітці часу сервера; `emptySyncReport`, `failedSyncReport` | 9 |
-| `apps/api/src/auth/auth.service.spec.ts` | реєстрація, 409 на зайняте ім'я, 401 на невірний пароль, вхід | 4 |
-| `apps/api/src/auth/jwt.strategy.spec.ts` | `JwtStrategy.validate`: повертає поточного користувача, відхиляє токен видаленого користувача | 2 |
-| `apps/api/src/config.spec.ts` | `loadConfig`: типовий порт, коли `PORT` не число | 1 |
-| `apps/api/src/files/files.controller.spec.ts` | `FilesController.upload`: 400 на завантаження без файлу | 1 |
-| `apps/api/src/files/files.service.spec.ts` | `FilesService.upsert` (створення, **перезапис з тим самим id/key**), валідація імені, чужий простір (404), відкат рядка при помилці сховища, порядок видалення | 8 |
-| `apps/api/src/storage/storage.service.spec.ts` | `StorageService.putObject/getObject/deleteObject`, створення бакета при відсутності | 3 |
-| `apps/api/src/users/users.service.spec.ts` | bcrypt-хеш пароля, пошук за іменем | 2 |
-| `apps/desktop/src/main/sync/syncEngine.test.ts` | `SyncEngine.scan/synchronize`: завантаження та скачування зі встановленням mtime, пропуск ідентичних, підрахунок помилок без переривання, захист від виходу за межі каталогу (шлях і зворотний слеш), пропуск скачування файлу з крапкою на початку імені, звіт про прогрес (`onProgress`) | 7 |
+|-----------------|----------------------------|----|
+| shared / `fileList.test.ts` | `sortByName` (зростання/спадання, стабільність, регістронезалежність — **операція варіанта**), `filterByType` (усі файли / лише `.cpp` / лише `.png` — **операція варіанта**, окремо копія масиву для `'all'`), `extensionOf` (звичайне розширення й порожнє для імені, що закінчується голою крапкою), `isSafeFileName`, `isSyncableName` | 12 |
+| shared / `preview.test.ts` | `previewKindOf` для типів варіанта `.cs`→текст, `.jpg`→зображення, узагальнено для інших текстових/растрових, `'none'` для інших; `createPreview`; `FilePreview.canRender` | 7 |
+| shared / `columns.test.ts` | `toggleColumn`, незнімний стовпець «Назва» | 2 |
+| shared / `driveViewModel.test.ts` | `DriveViewModel`: застосування сортування й фільтра варіанта до `visibleFiles`, неможливість приховати «Назва» | 2 |
+| shared / `apiClient.test.ts` | `ApiClient`: bearer-токен, `ApiError` зі статусом, multipart з полем `file`, обрізання кінцевого слеша базової адреси, скачування як blob, видалення файлу, реєстрація, `undefined` на відповідь 204, об'єднання масиву повідомлень помилки | 9 |
+| shared / `sync.test.ts` | `computeSyncPlan`: лише локально/лише віддалено, пропуск у межах похибки годинника, перемога новішої версії, різниця розміру як зміна, скачування замість помилки при непридатній для розбору мітці часу сервера; `emptySyncReport`, `failedSyncReport` | 9 |
+| api / `auth.service.spec.ts` | реєстрація, 409 на зайняте ім'я, 401 на невірний пароль, вхід | 4 |
+| api / `jwt.strategy.spec.ts` | `JwtStrategy.validate`: повертає поточного користувача, відхиляє токен видаленого користувача | 2 |
+| api / `config.spec.ts` | `loadConfig`: типовий порт, коли `PORT` не число | 1 |
+| api / `files.controller.spec.ts` | `FilesController.upload`: 400 на завантаження без файлу | 1 |
+| api / `files.service.spec.ts` | `FilesService.upsert` (створення, **перезапис з тим самим id/key**), валідація імені, чужий простір (404), відкат рядка при помилці сховища, порядок видалення | 8 |
+| api / `storage.service.spec.ts` | `StorageService.putObject/getObject/deleteObject`, створення бакета при відсутності | 3 |
+| api / `users.service.spec.ts` | bcrypt-хеш пароля, пошук за іменем | 2 |
+| desktop / `syncEngine.test.ts` | `SyncEngine.scan/synchronize`: завантаження та скачування зі встановленням mtime, пропуск ідентичних, підрахунок помилок без переривання, захист від виходу за межі каталогу (шлях і зворотний слеш), пропуск скачування файлу з крапкою на початку імені, звіт про прогрес (`onProgress`) | 7 |
 
 Разом: **shared — 41**, **api — 21**, **desktop — 7**, усього 69 тестів, усі проходять (`yarn test` з кореня):
 

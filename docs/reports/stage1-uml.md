@@ -111,7 +111,7 @@ toc-title: "Зміст"
 ## REST API
 
 | Метод | Шлях | Призначення |
-|---|---|---|
+|-----|-------------|--------------------------------|
 | POST | `/auth/register` | реєстрація, повертає `AuthResponseDto {accessToken, user}` |
 | POST | `/auth/login` | вхід, повертає `AuthResponseDto` |
 | GET | `/auth/me` | поточний користувач |
