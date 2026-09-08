@@ -6,14 +6,16 @@ import { makeFileDto } from './testFixtures';
 const f = (name: string): FileDto => makeFileDto({ id: name, name });
 
 describe('DriveViewModel', () => {
-  it('applies sort by name and the cpp/png filter to visibleFiles', () => {
+  it('applies sort by name and the type filter to visibleFiles', () => {
     const vm = new DriveViewModel();
     vm.setFiles([f('z.png'), f('a.cs'), f('m.cpp'), f('B.txt')]);
     expect(vm.visibleFiles.map((x) => x.name)).toEqual(['a.cs', 'B.txt', 'm.cpp', 'z.png']);
     vm.setOrder('desc');
     expect(vm.visibleFiles.map((x) => x.name)).toEqual(['z.png', 'm.cpp', 'B.txt', 'a.cs']);
-    vm.setFilter('cpp-png');
-    expect(vm.visibleFiles.map((x) => x.name)).toEqual(['z.png', 'm.cpp']);
+    vm.setFilter('png');
+    expect(vm.visibleFiles.map((x) => x.name)).toEqual(['z.png']);
+    vm.setFilter('cpp');
+    expect(vm.visibleFiles.map((x) => x.name)).toEqual(['m.cpp']);
   });
 
   it('cannot hide the name column', () => {

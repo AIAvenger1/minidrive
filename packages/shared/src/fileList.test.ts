@@ -42,8 +42,12 @@ describe('filterByType', () => {
     expect(result).toEqual(files);
   });
 
-  it('keeps only .cpp and .png for "cpp-png", case-insensitively', () => {
-    expect(filterByType(files, 'cpp-png').map((f) => f.name)).toEqual(['main.cpp', 'logo.PNG']);
+  it('keeps only .cpp files for "cpp"', () => {
+    expect(filterByType(files, 'cpp').map((f) => f.name)).toEqual(['main.cpp']);
+  });
+
+  it('keeps only .png files for "png", case-insensitively', () => {
+    expect(filterByType(files, 'png').map((f) => f.name)).toEqual(['logo.PNG']);
   });
 });
 

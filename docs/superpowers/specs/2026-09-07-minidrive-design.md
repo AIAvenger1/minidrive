@@ -21,7 +21,7 @@ General requirements (apply to both the desktop and the web client):
   (plus size and type as auxiliary columns).
 - R3. Show or hide every column except **name**.
 - R4. Sort by name ascending / descending (variant operation).
-- R5. Filter: all files / only `.cpp` and `.png` (variant operation).
+- R5. Filter: all files / only `.cpp` / only `.png` (variant operation; the two types are separate options).
 - R6. Click a file to display its content: `.cs` as plain text, `.jpg` as image (variant type). Other
   types show attributes only with a "preview not available" note.
 - R7. Upload files (a new file or a new version of an existing one), download files, delete files.
@@ -47,7 +47,7 @@ Top-level use cases (UA names are used verbatim in the diagrams):
 | UC3 | Work with the file storage | root; `include` UC2; `include` UC4 |
 | UC4 | View the list of files and their attributes | included by UC3 (green) |
 | UC5 | Sort by name | `extend` UC4; parameter leaves «Ascending», «Descending» |
-| UC6 | Filter by type | `extend` UC4; parameter leaves «All files», «Only .cpp, .png» |
+| UC6 | Filter by type | `extend` UC4; parameter leaves «All files», «Only .cpp», «Only .png» |
 | UC7 | Show / hide table columns | `extend` UC4; leaves «Creation date», «Modification date», «Uploaded by», «Edited by», «Size» |
 | UC8 | View the file contents | `extend` UC4; leaves «.cs as text», «.jpg as image» |
 | UC9 | Upload file(s) to the storage | `extend` UC3 (yellow); sub-cases UC9a «Select and upload», UC9b «Drag-and-drop» |
@@ -149,7 +149,7 @@ Errors: 401 unauthorized, 404 file not in caller's space, 409 username taken, 41
 
 ### 3.3 Shared package — `packages/shared`
 
-Types: `FileDto`, `SortOrder = 'asc' | 'desc'`, `FileFilter = 'all' | 'cpp-png'`,
+Types: `FileDto`, `SortOrder = 'asc' | 'desc'`, `FileFilter = 'all' | 'cpp' | 'png'`,
 `ColumnKey = 'name' | 'size' | 'extension' | 'createdAt' | 'updatedAt' | 'uploadedBy' | 'modifiedBy'`,
 `ColumnVisibility = Record<ColumnKey, boolean>` (name is always `true`),
 `PreviewKind = 'text' | 'image' | 'none'`, `LocalFileInfo {name, size, mtime}`,
@@ -162,7 +162,7 @@ Pure functions (each unit-tested):
 | Function | Behaviour |
 |---|---|
 | `sortByName(files, order)` | stable, locale-aware (`localeCompare` with `numeric: true`), case-insensitive; `asc` / `desc` |
-| `filterByType(files, filter)` | `'all'` returns input; `'cpp-png'` keeps extensions `cpp` and `png` (case-insensitive) |
+| `filterByType(files, filter)` | `'all'` returns a copy; `'cpp'` keeps `.cpp` files, `'png'` keeps `.png` files (case-insensitive); the two variant types are offered as separate options (user decision, 2026-09-08) |
 | `previewKindOf(name)` | text-like extensions (`cs`, `cpp`, `c`, `h`, `txt`, `md`, `json`, `js`, `ts`, `py`, `java`, `kt`, `xml`, `html`, `css`) → `'text'`; raster images (`jpg`, `jpeg`, `png`, `gif`, `bmp`, `webp`) → `'image'`; else `'none'` |
 | `toggleColumn(visibility, key)` | flips a column; `name` cannot be hidden |
 | `computeSyncPlan(local, remote)` | see §4.2 |

@@ -9,7 +9,8 @@ export function FilterControl({ filter, onChange }: { filter: FileFilter; onChan
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="all">Усі файли</SelectItem>
-        <SelectItem value="cpp-png">Лише .cpp, .png</SelectItem>
+        <SelectItem value="cpp">Лише .cpp</SelectItem>
+        <SelectItem value="png">Лише .png</SelectItem>
       </SelectContent>
     </Select>
   );

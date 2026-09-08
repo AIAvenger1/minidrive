@@ -13,7 +13,7 @@ export type UserDto = { id: string; username: string };
 export type AuthResponseDto = { accessToken: string; user: UserDto };
 
 export type SortOrder = 'asc' | 'desc';
-export type FileFilter = 'all' | 'cpp-png';
+export type FileFilter = 'all' | 'cpp' | 'png';
 
 export type ColumnKey = 'name' | 'size' | 'extension' | 'createdAt' | 'updatedAt' | 'uploadedBy' | 'modifiedBy';
 export type ColumnVisibility = Record<ColumnKey, boolean>;
