@@ -7,6 +7,7 @@ COPY packages/ui/package.json packages/ui/
 COPY apps/api/package.json apps/api/
 COPY apps/desktop/package.json apps/desktop/
 COPY apps/web/package.json apps/web/
+COPY apps/api/prisma/schema.prisma apps/api/prisma/
 RUN yarn workspaces focus @minidrive/api @minidrive/shared
 COPY packages/shared packages/shared
 COPY apps/api apps/api
@@ -23,4 +24,4 @@ COPY --from=build /repo/apps/api/dist apps/api/dist
 COPY --from=build /repo/apps/api/prisma apps/api/prisma
 WORKDIR /repo/apps/api
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "/repo/node_modules/.bin/prisma migrate deploy && node dist/main"]
