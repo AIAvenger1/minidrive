@@ -33,13 +33,13 @@ export class ApiClient {
     return this.json('GET', '/files');
   }
 
-  async upload(name: string, data: Blob | Uint8Array, mimeType = 'application/octet-stream'): Promise<FileDto> {
+  async upload(name: string, data: Blob | Uint8Array<ArrayBuffer>, mimeType = 'application/octet-stream'): Promise<FileDto> {
     const form = new FormData();
     let blob: Blob;
     if (data instanceof Blob) {
       blob = data;
     } else {
-      blob = new Blob([data as any], { type: mimeType });
+      blob = new Blob([data], { type: mimeType });
     }
     form.append('file', new File([blob], name, { type: blob.type || mimeType }));
     const res = await fetch(`${this.baseUrl}/files`, { method: 'POST', headers: this.authHeaders(), body: form });
