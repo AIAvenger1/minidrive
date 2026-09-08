@@ -6,3 +6,4 @@ export * from './sync';
 export * from './apiClient';
 export * from './driveViewModel';
 export * from './testFixtures';
+export * from './syncLedger';
