@@ -1,5 +1,16 @@
 import {
-  Controller, Delete, Get, HttpCode, Param, Post, Res, StreamableFile, UploadedFile, UseGuards, UseInterceptors,
+  BadRequestException,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Res,
+  StreamableFile,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
@@ -8,7 +19,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { JwtUser } from '../auth/jwt.strategy';
 import { loadConfig } from '../config';
-import { FileDto } from './file.dto';
+import type { FileDto } from './file.dto';
 import { FilesService } from './files.service';
 
 @ApiTags('files')
@@ -25,20 +36,38 @@ export class FilesController {
 
   @Post()
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: loadConfig().maxFileBytes } }))
-  upload(@CurrentUser() user: JwtUser, @UploadedFile() file: Express.Multer.File): Promise<FileDto> {
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: loadConfig().maxFileBytes },
+    }),
+  )
+  upload(
+    @CurrentUser() user: JwtUser,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<FileDto> {
+    if (!file) throw new BadRequestException('File is required');
     return this.files.upsert(user, file);
   }
 
   @Get(':id/content')
-  async download(@CurrentUser() user: JwtUser, @Param('id') id: string, @Res({ passthrough: true }) res: Response): Promise<StreamableFile> {
+  async download(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
     const content = await this.files.getContent(user.id, id);
     res.set({
       'Content-Type': content.mimeType,
       'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(content.name)}`,
     });
-    if (typeof content.size === 'number') res.set('Content-Length', String(content.size));
+    if (typeof content.size === 'number')
+      res.set('Content-Length', String(content.size));
     return new StreamableFile(content.stream);
   }
 

@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, Length, Matches } from 'class-validator';
+import type {
+  AuthResponseDto as SharedAuthResponseDto,
+  UserDto as SharedUserDto,
+} from '@minidrive/shared';
 
 export class RegisterDto {
   @ApiProperty({ example: 'bohdan' })
@@ -16,12 +20,12 @@ export class RegisterDto {
 
 export class LoginDto extends RegisterDto {}
 
-export class UserDto {
+export class UserDto implements SharedUserDto {
   @ApiProperty() id!: string;
   @ApiProperty() username!: string;
 }
 
-export class AuthResponseDto {
+export class AuthResponseDto implements SharedAuthResponseDto {
   @ApiProperty() accessToken!: string;
   @ApiProperty({ type: UserDto }) user!: UserDto;
 }

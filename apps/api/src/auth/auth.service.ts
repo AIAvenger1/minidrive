@@ -1,12 +1,19 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '@prisma/client';
+import type { User } from '@prisma/client';
 import { UsersService } from '../users/users.service';
-import { AuthResponseDto, LoginDto, RegisterDto } from './dto';
+import type { AuthResponseDto, LoginDto, RegisterDto } from './dto';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly users: UsersService, private readonly jwt: JwtService) {}
+  constructor(
+    private readonly users: UsersService,
+    private readonly jwt: JwtService,
+  ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
     if (await this.users.findByUsername(dto.username)) {
