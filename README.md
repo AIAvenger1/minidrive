@@ -45,4 +45,6 @@ docker compose -f docker/compose.prod.yml --env-file docker/.env.prod up -d --bu
 
 Публічний екземпляр: <https://minidrive.trelawney.tech> (Hetzner Cloud, Ubuntu 24.04, Docker). Тестові користувачі створюються через `POST /api/auth/register` або `ts-node prisma/seed.ts` у контейнері `api`.
 
+Доступ до бази й сховища на production відкрито лише через SSH: `docker/compose.admin.yml` публікує PostgreSQL (5432) і консоль MinIO (9001) тільки на localhost сервера, а тунель `ssh -L 5432:127.0.0.1:5432 -L 9001:127.0.0.1:9001 <сервер>` робить їх доступними на локальній машині (`psql -h 127.0.0.1 -U minidrive minidrive`, консоль MinIO на `http://localhost:9001`).
+
 CI (`.github/workflows/ci.yml`) при кожному push і pull request збирає проєкт (`yarn build`) і запускає тести (`yarn test`).
